@@ -19,7 +19,7 @@ ifeq (${SKIP_GPU}, true)
 GPU_ARGS =
 endif
 
-REPO = drivendata/cloud-cover-competition
+REPO = drivendata/nasa-airport-config-competition
 
 TAG = ${CPU_OR_GPU}-latest
 LOCAL_TAG = ${CPU_OR_GPU}-local

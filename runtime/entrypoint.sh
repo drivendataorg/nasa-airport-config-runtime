@@ -14,12 +14,12 @@ exit_code=0
     unzip ./submission/submission.zip -d ./
     ls -alh
 
-    if [ -f "main.py" ]
+    if [ -f "src.py" ]
     then
         echo "Running submission with Python"
-        conda run --no-capture-output -n condaenv python main.py
+        conda run --no-capture-output -n condaenv python app.py
     else
-        echo "ERROR: Could not find main.py in submission.zip"
+        echo "ERROR: Could not find src.py in submission.zip"
         exit_code=1
     fi
 

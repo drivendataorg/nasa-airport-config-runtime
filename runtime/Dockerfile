@@ -66,10 +66,13 @@ RUN mamba env create --name ${CONDA_ENV} -f /home/${NB_USER}/environment.yml  \
     && find ${CONDA_DIR} -follow -type f -name '*.pyc' -delete \
     && find ${CONDA_DIR} -follow -type f -name '*.js.map' -delete
 
-# Copy run script into working dir and set it as the working doie
+EXPOSE 5001
+
+# Copy code into working directory
 WORKDIR /codeexecution
 COPY --chown=appuser:appuser scripts /codeexecution/scripts
 COPY --chown=appuser:appuser tests /codeexecution/tests
 COPY --chown=appuser:appuser data /codeexecution/data
+COPY --chown=appuser:appuser app.py /codeexecution/app.py
 COPY --chown=appuser:appuser entrypoint.sh /codeexecution/entrypoint.sh
 CMD ["/bin/bash", "/codeexecution/entrypoint.sh"]
