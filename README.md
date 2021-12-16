@@ -2,263 +2,287 @@
 
 ![Python 3.9](https://img.shields.io/badge/Python-3.9-blue) [![GPU Docker Image](https://img.shields.io/badge/Docker%20image-gpu--latest-green)](https://hub.docker.com/r/drivendata/cloud-cover-competition/tags?page=1&name=gpu-latest) [![CPU Docker Image](https://img.shields.io/badge/Docker%20image-cpu--latest-green)](https://hub.docker.com/r/drivendata/cloud-cover-competition/tags?page=1&name=cpu-latest) 
 
-Welcome to the runtime repository for the [TODO: Cloud Cover Challenge](https://www.drivendata.org/competitions/). This repository contains the definition of the environment where your code submissions will run. It specifies both the operating system and the software packages that will be available to your solution.
 
-<div style="background-color: lightgoldenrodyellow">
+### For instructions about how to submit to the [Cloud Cover Challenge](https://www.drivendata.org/competitions/83/cloud-cover/), start with the Code submission format [page](https://www.drivendata.org/competitions/83/cloud-cover/page/412/) of the competition website.
 
-**Note:** This repository is designed to be compatible with Microsoft's [Planetary Computer](https://github.com/microsoft/planetary-computer-containers) containers.
+Welcome to the runtime repository for the [Cloud Cover Challenge](https://www.drivendata.org/competitions/83/cloud-cover/). This repository contains the definition of the environment where your code submissions will run. It specifies both the operating system and the software packages that will be available to your solution.
 
-The [Planetary Computer Hub](https://planetarycomputer.microsoft.com/docs/overview/environment) provides a convenient way to compute on data from the Planetary Computer. In this competition, you can train your model in the Planetary Computer Hub and test it using this repo. To request beta access to the Planetary Computer Hub, fill out [this form](https://planetarycomputer.microsoft.com/account/request) and include "DrivenData" in your area of study.
-
-</div>
+> **Note:** This repository is designed to be compatible with Microsoft's [Planetary Computer](https://github.com/microsoft/planetary-computer-containers) containers.
 
 This repository has three primary uses for competitors:
 
-- **Example for developing your solutions**: You can find here a [baseline solution](https://github.com/drivendataorg/cloud-cover-runtime/tree/master/benchmark) `main.py` which does not do very much but will run in the runtime environment and outputs a proper submission. You can use this as a guide to bring in your model and generate a submission. You can also find an example implementation of the [PyTorch benchmark](https://github.com/drivendataorg/cloud-cover-runtime/tree/main/benchmark-pytorch) based on the [TODO: benchmark blog post](https://www.drivendata.co/blog/).
+:bulb: **Provide example solutions**: You can find two examples to help you develop your solution. 
+1. [Baseline solution](https://github.com/drivendataorg/cloud-cover-runtime/tree/main/submission_src): minimal code that runs succesfully in the runtime environment output and outputs a proper submission. This simply predicts zeros for ever chip. You can use this as a guide to bring in your model and generate a submission.
+2. Implementation of the [PyTorch benchmark](https://github.com/drivendataorg/cloud-cover-runtime/tree/main/benchmark_src): submission code based on the [benchmark blog post](https://www.drivendata.co/blog/cloud-cover-benchmark/)
 
-- **Testing your code submission**: Test your `submission.zip` file with a locally running version of the container to discover errors before submitting it to the competition site. You can also find an [TODO: evaluation script](https://github.com/drivendataorg/cloud-cover-runtime/blob/main/runtime/scripts/metric.py) for implementing the competition metric.
+:wrench: **Test your submission**: Test your `submission` files with a locally running version of the container to discover errors before submitting to the competition site. You can also find an [evaluation script](https://github.com/drivendataorg/cloud-cover-runtime/blob/main/runtime/scripts/metric.py) for implementing the competition metric.
 
-- **Requesting new packages in the official runtime**: It lets you test adding additional packages to the official runtime [CPU](https://github.com/drivendataorg/cloud-cover-runtime/blob/main/runtime/environment-cpu.yml) and [GPU](https://github.com/drivendataorg/cloud-cover-runtime/blob/main/runtime/environment-gpu.yml) environments. The official runtime uses **Python 3.9.6** environments managed by [Anaconda](https://docs.conda.io/en/latest/). You can then submit a PR to request compatible packages be included in the official container image.
+:package: **Request new packages in the official runtime**: Since the Docker container will not have network access, all packages must be pre-installed. If you want to use a package that is not in the runtime environment, make a pull request to this repository. Make sure to test out adding the new package to both official environments, [CPU](https://github.com/drivendataorg/cloud-cover-runtime/blob/main/runtime/environment-cpu.yml) and [GPU](https://github.com/drivendataorg/cloud-cover-runtime/blob/main/runtime/environment-gpu.yml).
 
  ----
 
-### [Getting started](#0-getting-started)
+### [0. Getting started](#getting-started)
  - [Prerequisites](#prerequisites)
- - [Quickstart](#quickstart)
-### [Testing your submission locally](#1-testing-your-submission-locally)
- - [Implement your solution](#implement-your-solution)
- - [Example benchmark submission](#example-benchmark-submission)
- - [Making a submission](#making-a-submission)
- - [Reviewing the logs](#reviewing-the-logs)
-### [Updating the runtime packages](#2-updating-the-runtime-packages)
-### [Useful scripts for local testing](#3-useful-scripts-for-local-testing)
+ - [Fake test data](#fake-test-data)
+### [1. Testing a submission locally](#testing-a-submission-locally)
+ - [Running your submission locally](#running-your-submission-locally)
+ - [Scoring your predictions](#scoring-your-predictions)
+ - [Running the benchmark](#running-the-benchmark)
+### [2. Runtime network access](#runtime-network-access)
+### [3. Troubleshooting](#troubleshooting)
+### [4. Updating runtime packages](#updating-runtime-packages)
 
 ----
 
-## (0) Getting started
+## Getting started
 
 ### Prerequisites
-
-Make sure you have the prerequisites installed.
 
  - A clone or fork of this repository
  - [Docker](https://docs.docker.com/get-docker/)
  - At least ~12 GB of free space for both the training images and the Docker container images
- - [GNU make](https://www.gnu.org/software/make/) (optional, but useful for using the commands in the Makefile)
+ - [GNU make](https://www.gnu.org/software/make/) (optional, but useful for running the commands in the Makefile)
 
 Additional requirements to run with GPU:
 
  - [NVIDIA drivers](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#package-manager-installation) with **CUDA 11**
  - [NVIDIA Docker container runtime](https://nvidia.github.io/nvidia-container-runtime/)
 
-### Quickstart
+### Fake test data
 
-To test out the full execution pipeline, run the following commands in order in the terminal. These will get the Docker images, zip up an example submission script, and run the submission on your locally running version of the container.  The `make` commands will try to select the CPU or GPU image automatically by setting the `CPU_OR_GPU` variable based on whether `make` detects `nvidia-smi`.
+To run any submission, the code execution environment needs access to test features in `runtime/data/test_features` and test metadata in `runtime/data/test_metadata.csv`. 
 
-**Note:** On machines with `nvidia-smi` but a CUDA version other than 11, `make` will automatically select the GPU image, which will fail. In this case, you will have to set `CPU_OR_GPU=cpu` manually in the commands, e.g., `CPU_OR_GPU=cpu make pull`, `CPU_OR_GPU=cpu make test-submission`. If you want to try using the GPU image on your machine but you don't have a GPU device that can be recognized, you can use `SKIP_GPU=true` which will invoke `docker` without the `--gpus all` argument.
-
-Download the [TODO: training images](https://www.drivendata.org/competitions/81/detect-flood-water/data/) from the competition and put all the `.tif` files from `training_features` into `runtime/data/test_features` so that you can test locally by pretending your training data is the actual test data expected by the execution environment but which you don't have locally.
-
-```bash
-ls runtime/data/test_features/ | head -n 5
-awc00_vh.tif
-awc00_vv.tif
-awc01_vh.tif
-awc01_vv.tif
-awc02_vh.tif
+```
+$ tree runtime/data
+├── test_features
+│	├── any_chip_id_1
+│	│   ├── B02.tif
+│	│   ├── B03.tif
+│	│   ├── B04.tif
+│	│   └── B08.tif
+│	├── any_chip_id_2
+│	│   ├── B02.tif
+│	│   ├── B03.tif
+│	│   ├── B04.tif
+│	│   └── B08.tif
+│	├── ...
+|
+└── test_metadata.csv
 ```
 
-Now we are ready to run the benchmark code:
+For details about how data is accessed in the code execution runtime, see the Code submission format [page](https://www.drivendata.org/competitions/83/cloud-cover/page/412/). Since we do not give direct access to the test data, you'll need to fake the data in one of two ways:
 
-```bash
+1. **Use the training data:** On the [Data download page](https://www.drivendata.org/competitions/83/cloud-cover/data/) you'll find instructions on how to download the training data (`data_download_instructions.txt`). Copy some of the TIF images from `train_features` into `runtime/data/test_features`, and download `train_metadata.csv` to `runtime/data/test_metadata.csv`. 
+
+2. **Generate fake data:** We have included a script that will generate random images and metadata that are the same format as the actual test data. Don't expect to do very well on these! You can specify the number of chips (`--n`) and random seed (`--seed`).
+
+    ```sh
+    $ python runtime/scripts/generate_fake_inputs.py runtime/data --n 10 --seed 304
+    ```
+
+When a Docker container is launched from your computer (or the "host" machine), the `runtime/data` directory on your host machine will be mounted as a read-only directory to `codeexecution/data`. In the runtime, your code will then be able to access test features from `codeexecution/data/test_features`.
+
+## Testing a submission locally
+
+Your submission will run inside a Docker container, a virtual operating system that allows for a consistent software environment across machines. **The best way to make sure your official submission to the DrivenData site will run is to first run it successfully in the container on your local machine.**
+
+On the official code execution platform, the test features and test metadata will already be mounted. The root level of your submission must contain a `main.py`. The steps that take place in the code execution platform are:
+
+1. Run `main.py` to generate predictions. `main.py` must perform inference on all of the test chips in `/codeexecution/data/test_features` and write predictions in the form of single-band 512x512 TIFs into the `/codeexecution/predictions` folder
+
+2. Compress all of the TIFs from `codeexecution/predictions` into a tar archive. The tar archive is then sent out for scoring - it is not scored inside of the code execution platform.
+
+> **Note:** <!-- TODO: explain how they might have access to `/data` in the local runtime but will not in the real deal -->
+
+For the full requirements of a submission, see the Code submission format [page](https://www.drivendata.org/competitions/83/cloud-cover/page/412/).
+
+### Running your submission locally
+
+This section provides instructions on how to run the your submission in the code execution container from your local machine. To simplify the steps, key processes have been defined in the `Makefile`. Commands from the `Makefile` are then run with `make {command_name}`. The basic steps are:
+```
 make pull
-make pack-benchmark
+make pack-submission
 make test-submission
 ```
 
-You should see output like this in the end (and find the same logs in the folder `submission/log.txt`):
+1. Set up the [prerequisites](#prerequisites)
 
+2. Save [fake data](#fake-test-data) in `runtime/data`
+
+3. Download the official competition Docker image:
+
+    ```bash
+    $ make pull
+    ```
+
+4. Save all of your submission files, including at least the required `main.py` script, in the `submission_src` folder of the runtime repository. Make sure any needed model weights are saved in `submission_src` as well.
+
+5. Create a `submission/submission.zip` file containing your code and model assets:
+    ```bash
+    $ make pack-submission
+    cd submission_src; zip -r ../submission/submission.zip ./*
+      adding: main.py (deflated 50%)
+    ```
+
+6. Launch an instance of the competition Docker image, and run the same inference process that will take place in the official runtime:
+   ```
+   $ make test-submission
+   ```
+    
+    This unzips `submission/submission.zip` in the root directory of the container, and then runs `main.py`. The resulting prediction TIFs in `codeexecution/predictions/` are then compressed into a tar archive for scoring. The tar archive is saved out to `submission/submission.tar.gz` on your local machine.
+   
+> Remember that `codeexecution/data/test_features` is a mounted version of what you have saved locally in `runtime/data/test_features`. In the official code execution platform, `codeexecution/data/test_features` will contain the actual test features.
+
+When you run `make test-submission` the logs will be printed to the terminal and written out to `submission/log.txt`. If you run into errors, use the `log.txt` to determine what changes you need to make for your code to execute successfully. For an example of what the logs look like when the full process runs successfully, see [`example_log.txt`](https://github.com/drivendataorg/cloud-cover-runtime/blob/main/example_log.txt).
+
+### Scoring your predictions
+
+We have provided a [metric script](https://github.com/drivendataorg/cloud-cover-runtime/blob/main/runtime/scripts/metric.py) to calculate the competition metric in the same way scores will be calculated in the DrivenData platform. To score your submission:
+
+1. After running the above, the predictions generated by your code should be saved in an archive at `submission/submission.tar.gz`. Unzip your submission into `submission/predictions`:
+   ```bash
+   $ mkdir submission/predictions
+   $ tar -xf submission/submission.tar.gz --directory submission/predictions 
+   ```
+
+2. Make sure the labels for your fake test data are saved in `runtime/data/test_labels` in the same format as the training labels. For example, if you have a chip with id `abcd` in `runtime/data/test_features`, the label for that chip should be saved at `runtime/data/test_labels/abcd.tif`
+   
+3. Run `runtime/scripts/metric.py` on your predictions:
+    ```bash
+    # show usage instructions
+    $ python runtime/scripts/metric.py --help
+    Usage: metric.py [OPTIONS] SUBMISSION_DIR ACTUAL_DIR
+
+      Given a directory with the predicted mask files (all values in {0, 1}) and
+      the actual mask files (all values in {0, 1}), get the overall
+      intersection-over-union score
+
+    Arguments:
+      SUBMISSION_DIR  [required]
+      ACTUAL_DIR      [required]
+
+    Options:
+      --install-completion  Install completion for the current shell.
+      --show-completion     Show completion for the current shell, to copy it or
+                            customize the installation.
+
+      --help                Show this message and exit.
+
+    # run script on your predictions
+    $ python runtime/scripts/metric.py submission/predictions runtime/data/test_labels
+    2021-12-14 12:42:06.112 | INFO     | __main__:main:42 - calculating score for 2 image pairs ...
+    100%|█████████████████████████| 2/2 [00:00<00:00, 293.04it/s]
+    2021-12-14 12:42:06.140 | SUCCESS  | __main__:main:44 - overall score: 0.5
+    ```
+
+### Running the benchmark
+
+The code for the [PyTorch benchmark](https://www.drivendata.co/blog/cloud-cover-benchmark/) is provided to demonstrate how a correct submission can be structured. See the benchmark [blog post](https://www.drivendata.co/blog/cloud-cover-benchmark/) for a full walkthrough. The process to run the benchmark is the same as running your own submission, except that you will reference code in `benchmark_src` rather than `submission_src`.
+
+To run the benchmark submission locally:
+
+1. Set up the [prerequisites](#prerequisites)
+
+2. Save [fake data](#fake-test-data) in `runtime/data`
+
+3. Download the official competition Docker image:
+
+    ```bash
+    $ make pull
+    ```
+
+4. Compress the files in `benchmark_src` to `submission/submission.zip`:
+   ```
+   $ make pack-benchmark
+   cd benchmark_src; zip -r ../submission/submission.zip ./*
+    adding: assets/ (stored 0%)
+    adding: assets/cloud_model.pt (deflated 7%)
+    adding: cloud_dataset.py (deflated 63%)
+    adding: cloud_model.py (deflated 74%)
+    adding: losses.py (deflated 57%)
+    adding: main.py (deflated 64%)
+   ```
+   To avoid losing your work, this command will not overwrite an existing submission. To generate a new submission, you will first need to remove the existing `submission/submission.zip`.
+
+5. Launch an instance of the competition Docker image, and run the same inference process that will take place in the official runtime:
+   ```
+   $ make test-submission
+   ```
+   Just like with your submission, the final predictions will be compressed into a tar archive and saved to `submission/submission.tar.gz` on your local machine.
+
+## Runtime network access
+
+In the real competition runtime, all internet access is blocked except to the Planetary Computer STAC API. The local test runtime does not impose the same network restrictions. **Any web requests outside of the Planetery Computer STAC API will work in the local test runtime, but fail in the actual competition runtime.** It's up to you to make sure that your code only makes requests to the Planetary Computer API and no other web resources.
+
+If you are not making calls to the Planetary Computer API, you can test your submission _without_ internet access by running `BLOCK_INTERNET=true make test-submission`.
+
+### Downloading pre-trained weights
+
+It is common for models to download pre-trained weights from the internet. Since submissions do not have open access to the internet, you will need to include all weights along with your `submission.zip` and make sure that your code loads them from disk and rather than the internet.
+
+For example, PyTorch uses a local cache which by default is saved to `~/.cache/torch`. Identify which of the weights in that directory are needed to run inference (if any), and copy them into your submission. If we need pre-trained ResNet34 weights we downloaded from online, we could run:
+```sh
+# Copy your local pytorch cache into submission_src/assets
+cp ~/.cache/torch/checkpoints/resnet34-333f7ec4.pth submission_src/assets/
+
+# Zip it all up in your submission.zip
+zip -r submission.zip submission_src
 ```
-$ make pack-benchmark
-cd benchmark; zip -r ../submission/submission.zip ./*
-  adding: main.py (deflated 57%)
 
-$ SKIP_GPU=true make test-submission
-chmod -R 0777 submission/
-docker run \
-	-it \
-	 \
-	--network none \
-	--mount type=bind,source="/tmp/cloud-cover-runtime"/runtime/data,target=/codeexecution/data,readonly \
-	--mount type=bind,source="/tmp/cloud-cover-runtime"/runtime/tests,target=/codeexecution/tests,readonly \
-	--mount type=bind,source="/tmp/cloud-cover-runtime"/runtime/entrypoint.sh,target=/codeexecution/entrypoint.sh \
-	--mount type=bind,source="/tmp/cloud-cover-runtime"/submission,target=/codeexecution/submission \
-	--shm-size 8g \
-	eec6a1f567e5
-+ cd /codeexecution
-+ echo 'Unpacking submission...'
-Unpacking submission...
-+ unzip ./submission/submission.zip -d ./
-Archive:  ./submission/submission.zip
-  inflating: ./main.py               
-+ ls -alh
-total 48K
-drwxr-xr-x 1 appuser appuser 4.0K Aug  3 18:18 .
-drwxr-xr-x 1 root    root    4.0K Aug  3 18:18 ..
-drwxrwxr-x 3 appuser appuser 4.0K Aug  3 17:52 data
--rw-rw-r-- 1 appuser appuser  926 Aug  3 18:14 entrypoint.sh
--rw-rw-r-- 1 appuser appuser 2.3K Aug  3 17:42 main.py
-drwxr-xr-x 2 appuser appuser 4.0K Jul 31 20:01 scripts
-drwxrwxrwx 2 appuser appuser  20K Aug  3 18:13 submission
-drwxrwxr-x 3 appuser appuser 4.0K Aug  3 17:59 tests
-+ '[' -f main.py ']'
-+ echo 'Running submission with Python'
-Running submission with Python
-+ conda run --no-capture-output -n condaenv python main.py
-2021-08-03 18:18:15.302 | INFO     | __main__:main:50 - found 542 expected image ids; generating predictions for each ...
+If we wanted to copy all of the contents in the PyTorch cache, we could instead run `cp -R ~/.cache/torch submission_src/assets/`. When the platform runs your code, it will extract `assets` to `/codeexecution/assets`. You'll need to tell PyTorch to use your custom cache directory instead of `~/.cache/torch` by setting the `TORCH_HOME` environment variable in your Python code (in `main.py` for example).
 
-  0%|          | 0/542 [00:00<?, ?it/s]
-  5%|▍         | 25/542 [00:00<00:08, 61.74it/s]
-  9%|▉         | 50/542 [00:01<00:11, 42.44it/s]
- 14%|█▍        | 75/542 [00:01<00:12, 36.70it/s]
- <... snip ...>
- 92%|█████████▏| 500/542 [00:15<00:01, 35.03it/s]
- 97%|█████████▋| 525/542 [00:17<00:00, 20.64it/s]
-100%|██████████| 542/542 [00:20<00:00, 26.82it/s]
-2021-08-03 18:18:35.529 | SUCCESS  | __main__:main:57 - ... done
-+ echo 'Testing that submission is valid'
-Testing that submission is valid
-+ conda run -n condaenv pytest -v tests/test_submission.py
-============================= test session starts ==============================
-platform linux -- Python 3.8.10, pytest-6.2.4, py-1.10.0, pluggy-0.13.1 -- /srv/conda/envs/condaenv/bin/python
-cachedir: .pytest_cache
-rootdir: /codeexecution
-plugins: anyio-3.3.0
-collecting ... collected 3 items
-
-tests/test_submission.py::test_all_files_in_format_have_corresponding_submission_file PASSED [ 33%]
-tests/test_submission.py::test_no_unexpected_tif_files_in_submission PASSED [ 66%]
-tests/test_submission.py::test_file_sizes_are_within_limit PASSED        [100%]
-
-============================== 3 passed in 17.07s ==============================
-
-+ echo 'Compressing files in a gzipped tar archive for submission'
-Compressing files in a gzipped tar archive for submission
-+ cd ./submission
-+ tar czf ./submisson.tar.gz *.tif
-+ cd ..
-+ echo '... finished'
-... finished
-+ du -h submission/submisson.tar.gz
-620K	submission/submisson.tar.gz
-+ echo '================ END ================'
-================ END ================
+```python
+import os
+os.environ["TORCH_HOME"] = "/codeexecution/assets/torch"
 ```
 
-## (1) Testing your submission locally
+Now PyTorch will load the model weights from the local cache, and your submission will run correctly in the code execution environment without downloading from the internet.
 
-Your submission will run inside a Docker container, a virtual operating system that allows for a consistent software environment across machines. This means that if your submission successfully runs in the container on your local machine, you can be pretty sure it will successfully run when you make an official submission to the DrivenData site.
+## Troubleshooting
 
-In Docker parlance, your computer is the "host" that runs the container. The container is isolated from your host machine, with the exception of the following directories:
+#### CPU and GPU
 
- - the `data` directory on the host machine is mounted in the container as a read-only directory `/codeexecution/data`
- - the `submission` directory on the host machine is mounted in the container as `/codeexecution/submission`
+The `make` commands will try to select the CPU or GPU image automatically by setting the `CPU_OR_GPU` variable based on whether `make` detects `nvidia-smi`.
 
-When you make a submission, the code execution platform will unzip your submission assets to the `/codeexecution` folder. This must result in a `main.py` in the top level `/codeexecution` working directory. (Hint: make sure your `main.py` is compressed at the top level of your `tar`'ed submission and not nested into a directory.)
-
-On the official code execution platform, we will take care of mounting the data―you can assume your submission will have access to `/codeexecution/data/test_features`. You are responsible for creating the submission script that will read from `/codeexecution/data` and write out `.tif`s to `/codeexecution/submission/`. Once your code finishes, some sanity checking tests run and then the script will zip up all the `.tif`s into an archive to be scored on the platform side.
-
-There is one important difference between your local test runtime and the official code execution runtime: `make test-submission` does not impose the same network restrictions that are in place in the real competition runtime. That means some web requests that will work in the local test runtime will fail in competition runtime. You'll need to make sure that your code only makes requests to allowed web resources, such as the Planetary Computer STAC API. (You _are_ permitted to write intermediate files to `/codeexecution/submission`, but if they are `.tif` files you will want to clean them up before your script finishes so they aren't considered part of your submission.)
-
-### Implement your solution
-
-In order to test your code submission, you will need a code submission! Implement your solution as a Python script named `main.py`. Next, create a `submission.zip` file containing your code and model assets.
-
-**Note: You will implement all of your training and experiments on your machine. It is highly recommended that you use the same package versions that are in the runtime conda environments ([Python (CPU)](runtime/environment-cpu.yml), [Python (GPU)](runtime/environment-gpu.yml). If you don't wish to use Docker these exact packages can be installed with `conda`.**
-
-The [submission format page](https://www.drivendata.org/competitions/81/detect-flood-water/page/389/) contains the detailed information you need to prepare your code submission.
-
-### Example benchmark submission
-
-We wrote a benchmark in Python to serve as a concrete example of a submission. Use `make pack-benchmark` to create the benchmark submission from the source code. The command zips everything in the `benchmark` folder and saves the zip archive to `submission/submission.zip`. To prevent losing your work, this command will not overwrite an existing submission. To generate a new submission, you will first need to remove the existing `submission/submission.zip`.
-
-### Running your submission
-
-Now you can make sure your submission runs locally prior to submitting it to the platform. Make sure you have the [prerequisites](#prerequisites) installed, and have copied the `train_features` images into the `runtime/test_features` directory. Then, run the following command to download the official image:
-
+**If you have `nvidia-smi` and a CUDA version other than 11**, you will need to explicitly set `make test-submission` to run on CPU rather than GPU. `make` will automatically select the GPU image because you have access to GPU, but it will fail because `make test-submission` requires CUDA version 11. 
 ```bash
-make pull
+CPU_OR_GPU=cpu make pull
+CPU_OR_GPU=cpu make test-submission
 ```
 
-Again, make sure you have packed up your solution in `submission/submission.zip` (or generated the sample submission with `make pack-submission`), then try running it:
+If you want to try using the GPU image on your machine but you don't have a GPU device that can be recognized, you can use `SKIP_GPU=true`. This will invoke `docker` without the `--gpus all` argument.
 
-```bash
-make test-submission
-```
+## Updating runtime packages
 
-This will start the container, mount the local data and submission folders as folders within the container, and follow the same steps that will run on the platform to unpack your submission and run your code.
+If you want to use a package that is not in the environment, you are welcome to make a pull request to this repository. If you're new to the GitHub contribution workflow, check out [this guide by GitHub](https://docs.github.com/en/get-started/quickstart/contributing-to-projects). The runtime manages dependencies using [conda](https://docs.conda.io/en/latest/) environments. [Here is a good general guide](https://towardsdatascience.com/a-guide-to-conda-environments-bc6180fc533) to conda environments. The official runtime uses **Python 3.9.7** environments.
 
-### Scoring your submission.tar.gz
+To submit a pull request for a new package:
 
-We have included a [metric script](https://github.com/drivendataorg/cloud-cover-runtime/blob/main/runtime/scripts/metric.py) that shows how the metric can be calculated locally on your training data the same way we score your actual submitted files. You can run this, too:
+1. Fork this repository.
+   
+2. Edit the [conda](https://docs.conda.io/en/latest/) environment YAML files, `runtime/environment-cpu.yml` and `runtime/environment-gpu.yml`. There are two ways to add a requirement:
+    - Add an entry to the `dependencies` section. This installs from a conda channel using `conda install`. Conda performs robust dependency resolution with other packages in the `dependencies` section, so we can avoid package version conflicts.
+    - Add an entry to the `pip` section. This installs from PyPI using `pip`, and is an option for packages that are not available in a conda channel.
 
-```bash
-# unzip your submission so the .tifs are actually around then come back up to the project root
-cd submission && tar xvf submission.tar.gz && cd ..
+    For both methods be sure to include a version, e.g., `numpy==1.20.3`. This ensures that all environments will be the same.
 
-# show usage instructions
-python runtime/scripts/metric.py --help
-#    Usage: metric.py [OPTIONS] SUBMISSION_DIR ACTUAL_DIR
-#    
-#      Given a directory with the predicted mask files (all values in {0, 1}) and
-#      the actual mask files (all values in {0, 1, 255}), get the overall
-#      intersection-over-union score
-#    
-#    Arguments:
-#      SUBMISSION_DIR  [required]
-#      ACTUAL_DIR      [required]
+3. Locally test that the Docker image builds successfully for CPU and GPU images:
 
-python runtime/scripts/metric.py submission runtime/data/test_labels
-# 2021-11-04 17:13:27.669 | INFO     | __main__:main:53 - calculating score for 10 image pairs ...
-# 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 10/10 [00:00<00:00, 644.43it/s]
-# 2021-11-04 17:13:27.687 | SUCCESS  | __main__:main:55 - overall score: 0.6863734581490337
-# (condaenv) ➜  cloud-cover-runtime git:(main) ✗ python runtime/scripts/metric.py submission runtime/data/test_labels
-# 2021-11-04 17:14:10.983 | INFO     | __main__:main:53 - calculating score for 10 image pairs ...
-# 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 10/10 [00:00<00:00, 617.95it/s]
-# 2021-11-04 17:14:11.002 | SUCCESS  | __main__:main:55 - overall score: 0.6863734581490337
-```
+    ```sh
+    CPU_OR_GPU=cpu make build
+    CPU_OR_GPU=gpu make build
+    ```
 
-### Reviewing the logs
-
-When you run `make test-submission` the logs will be printed to the terminal. They will also be written to the `submission` folder as `log.txt`. You can always review that file and copy any versions of it that you want from the `submission` folder. The errors there will help you to determine what changes you need to make sure your code executes successfully.
-
-## (2) Updating the runtime packages
-
-We accept contributions to add dependencies to the runtime environment. To do so, follow these steps:
-
-1. Fork this repository
-2. Make your changes
-3. Test them and commit using git
-3. Open a pull request to this repository
-
-If you're new to the GitHub contribution workflow, check out [this guide by GitHub](https://guides.github.com/activities/forking/).
-
-### Adding new Python packages
-
-We use [conda](https://docs.conda.io/en/latest/) to manage Python dependencies. Add your new dependencies to both `runtime/environment-cpu.yml` and `runtime/environment-gpu.yml`.
-
-Your new dependency should follow the format in the yml.
-
-### Opening a pull request
-
-After making and testing your changes, commit your changes and push to your fork. Then, when viewing the repository on github.com, you will see a banner that lets you open the pull request. For more detailed instructions, check out [GitHub's help page](https://help.github.com/en/articles/creating-a-pull-request-from-a-fork).
-
-Once you open the pull request, Github Actions will automatically try building the Docker images with your changes and run the tests in `runtime/tests`. These tests can take up to 30 minutes to run through, and may take longer if your build is queued behind others. You will see a section on the pull request page that shows the status of the tests and links to the logs.
-
-You may be asked to submit revisions to your pull request if the tests fail, or if a DrivenData team member asks for revisions. Pull requests won't be merged until all tests pass and the team has reviewed and approved the changes.
+4. Commit the changes to your forked repository.
+   
+5. Open a pull request from your branch to the `main` branch of this repository. Navigate to the [Pull requests](https://github.com/drivendataorg/cloud-cover-runtime/pulls) tab in this repository, and click the "New pull request" button. For more detailed instructions, check out [GitHub's help page](https://help.github.com/en/articles/creating-a-pull-request-from-a-fork).
+   
+6. Once you open the pull request, Github Actions will automatically try building the Docker images with your changes and running the tests in `runtime/tests`. These tests can take up to 30 minutes, and may take longer if your build is queued behind others. You will see a section on the pull request page that shows the status of the tests and links to the logs.
+   
+7. You may be asked to submit revisions to your pull request if the tests fail or if a DrivenData team member has feedback. Pull requests won't be merged until all tests pass and the team has reviewed and approved the changes.
 
 ---
 
 ## Good luck; have fun!
 
-Thanks for reading! Enjoy the competition, and [hit up the forums](https://community.drivendata.org/) if you have any questions!
+Thanks for reading! Enjoy the competition, and [hit up the forums](https://community.drivendata.org/c/cloud-cover/50) if you have any questions!
