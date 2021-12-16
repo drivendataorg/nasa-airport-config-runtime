@@ -1,7 +1,7 @@
-build-essential
 git
+vim
+tree
+ffmpeg
 libsm6
 libxext6
-sudo
-tree
-vim
+build-essential

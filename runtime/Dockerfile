@@ -5,7 +5,7 @@ FROM nvidia/cuda:11.0-base-ubuntu20.04
 ARG CPU_OR_GPU=gpu
 
 ENV CONDA_VERSION=4.10.3-2 \
-    CONDA_ENV=nasa-airport-config-runtime \
+    CONDA_ENV=condaenv \
     NB_USER=appuser \
     NB_UID=1000 \
     SHELL=/bin/bash \
@@ -57,6 +57,7 @@ RUN echo "Installing Miniforge..." \
     && find ${CONDA_DIR} -follow -type f -name '*.a' -delete \
     && find ${CONDA_DIR} -follow -type f -name '*.pyc' -delete
 
+# Switch back to root for installing conda packages
 COPY environment-${CPU_OR_GPU}.yml /home/${NB_USER}/environment.yml
 RUN mamba env create --name ${CONDA_ENV} -f /home/${NB_USER}/environment.yml  \
     && mamba clean -afy \
@@ -65,15 +66,13 @@ RUN mamba env create --name ${CONDA_ENV} -f /home/${NB_USER}/environment.yml  \
     && find ${CONDA_DIR} -follow -type f -name '*.pyc' -delete \
     && find ${CONDA_DIR} -follow -type f -name '*.js.map' -delete
 
+EXPOSE 5001
+
 # Copy code into working directory
 WORKDIR /codeexecution
-RUN mkdir data predictions submission
 COPY --chown=appuser:appuser scripts /codeexecution/scripts
 COPY --chown=appuser:appuser tests /codeexecution/tests
+COPY --chown=appuser:appuser data /codeexecution/data
+COPY --chown=appuser:appuser app.py /codeexecution/app.py
 COPY --chown=appuser:appuser entrypoint.sh /codeexecution/entrypoint.sh
-
-# Set up restricted test dataset
-USER root
-RUN mkdir /data && chmod -R 700 /data
-
 CMD ["/bin/bash", "/codeexecution/entrypoint.sh"]

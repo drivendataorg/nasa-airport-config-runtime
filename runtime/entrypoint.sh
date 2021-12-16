@@ -7,36 +7,25 @@ exit_code=0
 
     echo "List installed packages"
     echo "######################################"
-    conda list -n nasa-airport-config-runtime
+    conda list -n condaenv
     echo "######################################"
 
     echo "Unpacking submission..."
     unzip ./submission/submission.zip -d ./
     ls -alh
 
-    if [ -f "main.py" ]
+    if [ -f "src.py" ]
     then
         echo "Running submission with Python"
-	while read prediction_time
-	do
-	    conda run \
-		  --no-capture-output \
-		  -n nasa-airport-config-runtime \
-		  python supervisor.py $prediction_time
-	    sudo -u appuser \
-		 /srv/conda/bin/conda run \
-		 --no-capture-output \
-		 -n nasa-airport-config-runtime \
-		 python main.py $prediction_time
-	done < /data/prediction_times.txt
+        conda run --no-capture-output -n condaenv python app.py
     else
-        echo "ERROR: Could not find main.py in submission.zip"
+        echo "ERROR: Could not find src.py in submission.zip"
         exit_code=1
     fi
 
     # Test that submission is valid
     echo "Testing that submission is valid"
-    conda run -n nasa-airport-config-runtime pytest -v tests/test_submission.py
+    conda run -n condaenv pytest -v tests/test_submission.py
 
     echo "Compressing files in a gzipped tar archive for submission"
     cd ./submission \
