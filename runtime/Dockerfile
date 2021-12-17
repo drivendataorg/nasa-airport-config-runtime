@@ -68,14 +68,14 @@ RUN mamba env create --name ${CONDA_ENV} -f /home/${NB_USER}/environment.yml  \
 # Copy code into working directory
 WORKDIR /codeexecution
 RUN mkdir data predictions submission
-COPY --chown=appuser:appuser scripts /codeexecution/scripts
-COPY --chown=appuser:appuser tests /codeexecution/tests
-COPY --chown=appuser:appuser entrypoint.sh /codeexecution/entrypoint.sh
 
 # Run the container as root
 USER root
 
 # Copy supervisor script
-COPY supervisor.py /codeexecution/supervisor.py
+COPY entrypoint.sh /supervisor/entrypoint.sh
+COPY scripts /supervisor/scripts
+COPY supervisor.py /supervisor/supervisor.py
+COPY tests /supervisor/tests
 
-CMD ["/bin/bash", "/codeexecution/entrypoint.sh"]
+CMD ["/bin/bash", "/supervisor/entrypoint.sh"]

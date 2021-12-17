@@ -7,6 +7,9 @@ exit_code=0
     find /data -type d -exec chmod 700 {} \;
     find /data -type f -exec chmod 600 {} \;
 
+    find /supervisor -type d -exec chmod 700 {} \;
+    find /supervisor -type f -exec chmod 600 {} \;
+
     cd /codeexecution
 
     echo "List installed packages"
@@ -28,26 +31,25 @@ exit_code=0
 	    conda run \
 		  --no-capture-output \
 		  -n nasa-airport-config-runtime \
-		  python supervisor.py $prediction_time
+		  python /supervisor/supervisor.py $prediction_time
 	    sudo -u appuser \
 		 /srv/conda/bin/conda run \
 		 --no-capture-output \
 		 -n nasa-airport-config-runtime \
 		 python main.py $prediction_time
+
+	    # Test that submission is valid
+	    echo "Testing that prediction is valid"
+	    conda run -n nasa-airport-config-runtime \
+		  python /supervisor/scripts/check_prediction.py $prediction_time
+
 	done < /data/prediction_times.txt
 
-	# Test that submission is valid
+	echo "Constructing submission from individual predictions"
+	conda run -n nasa-airport-config-runtime python /supervisor/scripts/construct_submission.py
+
 	echo "Testing that submission is valid"
-	conda run -n nasa-airport-config-runtime pytest -v tests/test_submission.py
-
-	echo "Compressing files in a gzipped tar archive for submission"
-	cd ./submission \
-	  && tar czf ./submission.tar.gz *.tif \
-	  && rm ./*.tif \
-	  && cd ..
-
-	echo "... finished"
-	du -h submission/submission.tar.gz
+	conda run -n nasa-airport-config-runtime pytest /supervisor/scripts/test_submission.py
 
     else
         echo "ERROR: Could not find main.py in submission.zip"

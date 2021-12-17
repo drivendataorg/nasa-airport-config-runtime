@@ -19,7 +19,8 @@ ifeq (${SKIP_GPU}, true)
 GPU_ARGS =
 endif
 
-REPO = drivendata/nasaairportconfig-competition
+COMPETITION_NAME = nasaairportconfig
+REPO = drivendata/${COMPETITION_NAME}-competition
 
 TAG = ${CPU_OR_GPU}-latest
 LOCAL_TAG = ${CPU_OR_GPU}-local
@@ -93,8 +94,10 @@ endif
 	docker run \
 		${TTY_ARGS} \
 		${GPU_ARGS} \
-		--mount type=bind,source="$(shell pwd)"/runtime/data,target=/data,readonly \
-		--mount type=bind,source="$(shell pwd)"/submission,target=/codeexecution/submission \
+		--rm \
+		--name ${COMPETITION_NAME}-submission \
+		--mount type=bind,source="$(shell pwd)"/runtime/data,target=/clouddata,readonly \
+		--mount type=bind,source="$(shell pwd)"/submission/submission.zip,target=/codeexecution/submission/submission.zip \
 		--shm-size 8g \
 		${SUBMISSION_IMAGE}
 
