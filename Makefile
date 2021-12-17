@@ -96,7 +96,6 @@ endif
 		--mount type=bind,source="$(shell pwd)"/runtime/data,target=/data,readonly \
 		--mount type=bind,source="$(shell pwd)"/submission,target=/codeexecution/submission \
 		--shm-size 8g \
-		--privileged \
 		${SUBMISSION_IMAGE}
 
 
