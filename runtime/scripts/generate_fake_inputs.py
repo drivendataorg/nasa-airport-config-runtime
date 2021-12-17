@@ -8,14 +8,12 @@ import typer
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
 
-def main(output_dir: Path, seed: int = 79):
+def main(input_dir: Path, output_dir: Path, seed: int = 79):
     rng = np.random.RandomState(seed)
     output_dir.mkdir(exist_ok=True, parents=True)
     min_timestamp = pd.Timestamp.max
     max_timestamp = pd.Timestamp.min
-    for path in Path(
-        "/home/robert/projects/competition-nasa-airport-config/data/sample/final/public"
-    ).glob("*"):
+    for path in Path(input_dir).glob("*"):
         logger.info(f"Processing {path.name}")
         if path.is_dir():
             airport = path.name
@@ -26,11 +24,11 @@ def main(output_dir: Path, seed: int = 79):
                 min_timestamp = min(min_timestamp, df.timestamp.min())
                 max_timestamp = max(max_timestamp, df.timestamp.max())
                 df.sample(50, random_state=rng).to_csv(
-                    output_dir / airport / csv_path.name
+                    output_dir / airport / csv_path.name, index=False
                 )
         else:
             logger.info(f"Creating sample of {path.name}")
-            pd.read_csv(path).to_csv(output_dir / path.name)
+            pd.read_csv(path).to_csv(output_dir / path.name, index=False)
 
     min_timestamp, max_timestamp = min_timestamp.floor("1H"), max_timestamp.ceil("1H")
     prediction_times = pd.date_range(min_timestamp, max_timestamp, freq="1H")
