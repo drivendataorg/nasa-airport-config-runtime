@@ -72,8 +72,10 @@ COPY --chown=appuser:appuser scripts /codeexecution/scripts
 COPY --chown=appuser:appuser tests /codeexecution/tests
 COPY --chown=appuser:appuser entrypoint.sh /codeexecution/entrypoint.sh
 
-# Set up restricted test dataset
+# Run the container as root
 USER root
-RUN mkdir /data && chmod -R 700 /data
+
+# Copy supervisor script
+COPY supervisor.py /codeexecution/supervisor.py
 
 CMD ["/bin/bash", "/codeexecution/entrypoint.sh"]

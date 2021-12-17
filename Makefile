@@ -19,7 +19,7 @@ ifeq (${SKIP_GPU}, true)
 GPU_ARGS =
 endif
 
-REPO = drivendata/nasa-airport-config-competition
+REPO = drivendata/nasaairportconfig-competition
 
 TAG = ${CPU_OR_GPU}-latest
 LOCAL_TAG = ${CPU_OR_GPU}-local
@@ -94,11 +94,9 @@ endif
 		${TTY_ARGS} \
 		${GPU_ARGS} \
 		--mount type=bind,source="$(shell pwd)"/runtime/data,target=/data,readonly \
-		--mount type=bind,source="$(shell pwd)"/runtime/entrypoint.sh,target=/codeexecution/entrypoint.sh \
-		--mount type=bind,source="$(shell pwd)"/runtime/supervisor.py,target=/codeexecution/supervisor.py \
-		--mount type=bind,source="$(shell pwd)"/runtime/tests,target=/codeexecution/tests,readonly \
 		--mount type=bind,source="$(shell pwd)"/submission,target=/codeexecution/submission \
 		--shm-size 8g \
+		--privileged \
 		${SUBMISSION_IMAGE}
 
 
