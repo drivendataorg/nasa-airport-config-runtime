@@ -94,10 +94,11 @@ endif
 	docker run \
 		${TTY_ARGS} \
 		${GPU_ARGS} \
+		--network none \
 		--rm \
 		--name ${COMPETITION_NAME}-submission \
 		--mount type=bind,source="$(shell pwd)"/runtime/data,target=/clouddata,readonly \
-		--mount type=bind,source="$(shell pwd)"/submission/submission.zip,target=/codeexecution/submission/submission.zip \
+		--mount type=bind,source="$(shell pwd)"/submission,target=/codeexecution/submission \
 		--shm-size 8g \
 		${SUBMISSION_IMAGE}
 

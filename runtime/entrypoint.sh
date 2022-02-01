@@ -3,6 +3,7 @@ set -euxo pipefail
 exit_code=0
 
 {
+    echo "Copying data from the cloud to local disk"
     cp -r /clouddata /data
     find /data -type d -exec chmod 700 {} \;
     find /data -type f -exec chmod 600 {} \;
@@ -13,25 +14,42 @@ exit_code=0
     cd /codeexecution
 
     echo "List installed packages"
-    echo "######################################"
     conda list -n nasa-airport-config-runtime
-    echo "######################################"
 
-    echo "Unpacking submission..."
-    unzip ./submission/submission.zip -d ./
-    ls -alh
+    echo "Unpacking submission"
+    unzip -n ./submission/submission.zip -d ./
+
+    echo "File list"
+    find . -type f -exec sh -c 'printf "%s %s \n" "$(ls -l $1)" "$(md5sum $1)"' '' '{}' '{}' \;
 
     if [ -f "main.py" ]
     then
-        echo "Running submission with Python"
-	cp /data/aircraft_types_mapping.csv /codeexecution/data/aircraft_types_mapping.csv
+	echo "Extracting test features"
+	find /data -name '*.csv.bz2' -exec parallel -I% bunzip2 % ::: {} \+
 
+	cp /data/submission_format.csv /codeexecution
+	chown appuser:appuser /codeexecution/submission_format.csv
+
+	echo "Creating prediction time file"
+	tail -n +2 /data/submission_format.csv | cut -d ',' -f2 | sort | uniq > /data/prediction_times.txt
+	echo "Evaluating $(wc -l < prediction_times.txt) time points"
+	head /data/prediction_times.txt
+
+	echo "Available disk"
+	df -h /codeexecution
+
+        echo "Running submission with Python"
 	while read prediction_time
 	do
 	    conda run \
 		  --no-capture-output \
 		  -n nasa-airport-config-runtime \
 		  python /supervisor/supervisor.py $prediction_time
+
+	    find /extracts/$prediction_time -type d -exec chmod 755 {} \;
+	    find /extracts/$prediction_time -type f -exec chmod 644 {} \;
+	    ln -fs /extracts/$prediction_time data
+
 	    sudo -u appuser \
 		 /srv/conda/bin/conda run \
 		 --no-capture-output \
@@ -42,6 +60,8 @@ exit_code=0
 	    echo "Testing that prediction is valid"
 	    conda run -n nasa-airport-config-runtime \
 		  python /supervisor/scripts/check_prediction.py $prediction_time
+
+	    mv /codeexecution/prediction.csv /predictions/${prediction_time}.csv
 
 	done < /data/prediction_times.txt
 

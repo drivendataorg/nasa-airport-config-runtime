@@ -1,58 +1,26 @@
 from pathlib import Path
-from typing import Iterable, Tuple
 
 from loguru import logger
 import numpy as np
-from tifffile import imread
-from tqdm import tqdm
+import pandas as pd
+from sklearn.metrics import log_loss
 import typer
 
-NA_VALUE = 255
 
-
-def iterate_through_mask_pairs(
-    submission_dir: Path, actual_dir: Path
-) -> Iterable[Tuple[np.ndarray, np.ndarray]]:
-    """
-    For each tif in the actual directory, find the corresponding prediction tif, read
-    them both in, and yield the (pred, actual) tuple
-    """
-    for actual_path in actual_dir.glob("*.tif"):
-        filename = actual_path.name
-        predicted_path = submission_dir / filename
-        assert predicted_path.exists(), f"Could not find expected file: {filename}"
-        actual = imread(actual_path)
-        pred = imread(predicted_path)
-        yield pred, actual
-
-
-def intersection_over_union(
-    array_pairs: Iterable[Tuple[np.ndarray, np.ndarray]], total=None
-):
-    """Calculate the actual metric"""
-    intersection = 0
-    union = 0
-    for pred, actual in tqdm(array_pairs, total=total):
-        invalid_mask = actual == NA_VALUE
-        actual = np.ma.masked_array(actual, invalid_mask)
-        pred = np.ma.masked_array(pred, invalid_mask)
-        intersection += np.logical_and(actual, pred).sum()
-        union += np.logical_or(actual, pred).sum()
-    if union < 1:
-        raise ValueError("At least one image must be in the actual data set")
-    return intersection / union
-
-
-def main(submission_dir: Path, actual_dir: Path):
-    """
-    Given a directory with the predicted mask files (all values in {0, 1}) and the actual
-    mask files (all values in {0, 1, 255}), get the overall intersection-over-union score
-    """
-    n_expected = len(list(actual_dir.glob("*.tif")))
-    array_pairs = iterate_through_mask_pairs(submission_dir, actual_dir)
-    logger.info(f"calculating score for {n_expected} image pairs ...")
-    score = intersection_over_union(array_pairs, total=n_expected)
-    logger.success(f"overall score: {score}")
+def main(predictions_path: Path, labels_path: Path):
+    """Computes the mean-aggregated log loss for a set of predictions given some test labels."""
+    predictions = pd.read_csv(predictions_path)
+    labels = pd.read_csv(labels_path)
+    score = np.mean(
+        [
+            log_loss(
+                labels.loc[labels.airport == airport],
+                predictions.loc[predictions.airport == airport],
+            )
+            for airport in labels.airports.unique()
+        ]
+    )
+    logger.success(f"Score: {score}")
 
 
 if __name__ == "__main__":

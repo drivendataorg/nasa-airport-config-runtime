@@ -37,7 +37,6 @@ COPY ./apt.txt /home/${NB_USER}
 RUN echo "Installing base packages..." \
     && apt-get update --fix-missing \
     && apt-get install -y apt-utils 2> /dev/null \
-    && apt-get install -y wget zip tzdata \
     && xargs -a /home/${NB_USER}/apt.txt apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /home/${NB_USER}/apt.txt
@@ -67,7 +66,7 @@ RUN mamba env create --name ${CONDA_ENV} -f /home/${NB_USER}/environment.yml  \
 
 # Copy code into working directory
 WORKDIR /codeexecution
-RUN mkdir data predictions submission
+RUN mkdir submission
 
 # Run the container as root
 USER root
@@ -77,5 +76,6 @@ COPY entrypoint.sh /supervisor/entrypoint.sh
 COPY scripts /supervisor/scripts
 COPY supervisor.py /supervisor/supervisor.py
 COPY tests /supervisor/tests
+RUN mkdir /predictions && chmod 700 /predictions
 
 CMD ["/bin/bash", "/supervisor/entrypoint.sh"]

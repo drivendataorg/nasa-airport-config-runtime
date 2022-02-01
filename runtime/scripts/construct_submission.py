@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 import typer
 
-prediction_directory = Path("/codeexecution/predictions")
+prediction_directory = Path("/predictions")
 submission_path = Path("/codeexecution/submission.csv")
 
 
