@@ -12,7 +12,6 @@ DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
 test_feature_directory = Path("/data")
 extract_directory = Path("/extracts")
-extract_directory.mkdir(mode=0o777, exist_ok=True, parents=True)
 
 
 def create_feature_extracts(args):
@@ -39,7 +38,7 @@ def create_feature_extracts(args):
             valid_indices = df.timestamp < prediction_time_str
 
         extract_path = extract_directory / prediction_time_str / output_relative_path
-        extract_path.parent.mkdir(mode=0o700, exist_ok=True, parents=True)
+        extract_path.parent.mkdir(exist_ok=True, parents=True)
 
         df.loc[valid_indices].to_csv(extract_path, index=False)
 
@@ -51,7 +50,10 @@ def main(
 ):
     prediction_time_str = prediction_time.strftime(DATETIME_FORMAT)
     # Check if directory exists for prediction time
-    if (extract_directory / prediction_time_str).exists():
+    if (
+        extract_directory.exists()
+        and (extract_directory / prediction_time_str).exists()
+    ):
         logger.debug("Features for {} exist in extract cache.", prediction_time_str)
         return
 
@@ -61,8 +63,9 @@ def main(
     batch_end = prediction_time + pd.Timedelta(batch_period) - pd.Timedelta(batch_freq)
     logger.info(f"Generating data extracts from {batch_start} to {batch_end}.")
     logger.debug("Deleting extract cache.")
-    shutil.rmtree(extract_directory)
-    extract_directory.mkdir(mode=0o777, exist_ok=True, parents=True)
+    if extract_directory.exists():
+        shutil.rmtree(extract_directory)
+        extract_directory.mkdir(exist_ok=True, parents=True)
 
     feature_paths = (
         feature_path for feature_path in test_feature_directory.rglob("*.csv")
@@ -83,6 +86,13 @@ def main(
         total_time,
         total_time / len(prediction_times),
     )
+
+    logger.debug("Updating permissions")
+    for path in extract_directory.rglob("*"):
+        if path.is_dir():
+            path.chmod(0o700)
+        elif path.is_file():
+            path.chmod(0o600)
 
 
 if __name__ == "__main__":

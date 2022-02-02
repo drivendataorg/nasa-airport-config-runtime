@@ -26,8 +26,8 @@ def main(prediction_time: datetime):
         prediction_path.exists()
     ), f"Submission did not generate prediction for {prediction_time}."
 
-    prediction = pd.read_csv(prediction_path, parse_dates=["timestamp"])
-    submission_format = pd.read_csv(submission_format_path, parse_dates=["timestamp"])
+    prediction = pd.read_csv(prediction_path)
+    submission_format = pd.read_csv(submission_format_path)
 
     if not submission_format.columns.equals(prediction.columns):
         raise ValueError(

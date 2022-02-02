@@ -28,11 +28,11 @@ exit_code=0
 	find /data -name '*.csv.bz2' -exec parallel -I% bunzip2 % ::: {} \+
 
 	cp /data/submission_format.csv /codeexecution
-	chown appuser:appuser /codeexecution/submission_format.csv
+	chmod 644 /codeexecution/submission_format.csv
 
 	echo "Creating prediction time file"
 	tail -n +2 /data/submission_format.csv | cut -d ',' -f2 | sort | uniq > /data/prediction_times.txt
-	echo "Evaluating $(wc -l < prediction_times.txt) time points"
+	echo "Evaluating $(wc -l < /data/prediction_times.txt) time points"
 	head /data/prediction_times.txt
 
 	echo "Available disk"
@@ -48,7 +48,7 @@ exit_code=0
 
 	    find /extracts/$prediction_time -type d -exec chmod 755 {} \;
 	    find /extracts/$prediction_time -type f -exec chmod 644 {} \;
-	    ln -fs /extracts/$prediction_time data
+	    ln -fns /extracts/$prediction_time data
 
 	    sudo -u appuser \
 		 /srv/conda/bin/conda run \
