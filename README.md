@@ -48,25 +48,72 @@ Additional requirements to run with GPU:
  - [NVIDIA drivers](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#package-manager-installation) with **CUDA 11**
  - [NVIDIA Docker container runtime](https://nvidia.github.io/nvidia-container-runtime/)
 
-### Development dataset
+### Simulating test data
 
 To run a submission, the code execution environment reads features and the submission format from the `runtime/data` directory on the host machine.
 
 ```
 $ tree runtime/data
 ├── katl
-│	├── katl_awefwef.csv.bz2
-│	└── ...
+│   ├── katl_airport_config.csv.bz2
+│   ├── katl_arrival_runway.csv.bz2
+│   ├── ...
+│   └── katl_tfm_estimated_runway_arrival_time.csv.bz2
 ├── kclt
-│	├── kclt_awefwef.csv.bz2
-│	└── ...
+│   ├── kclt_airport_config.csv.bz2
+│   ├── kclt_arrival_runway.csv.bz2
+│   ├── ...
+│   └── kclt_tfm_estimated_runway_arrival_time.csv.bz2
+│   ...
 ├── ksea
-│	├── kclt_awefwef.csv.bz2
-│	└── ...
-└── final_submission_format.csv.bz2
+│   ├── ksea_airport_config.csv.bz2
+│   ├── ksea_arrival_runway.csv.bz2
+│   ├── ...
+│   └── ksea_tfm_estimated_runway_arrival_time.csv.bz2
+└── submission_format.csv
 ```
 
-We do not provide the full prescreened test set, so instead you can use the _development dataset_ to debug your submission; if your submission runs successfully on the development dataset, it should run successfully on the prescreened dataset. The development dataset is created from the open arena training features and labels. (You can download them from the [Data download page](https://www.drivendata.org/competitions/89/competition-nasa-airport-configuration/data/)). It consists of labels from the final day and features from the final day plus a _warm start_ period that starts two days prior to the final day.
+#### Development dataset
+
+We do not provide the full prescreened test set, so instead we need to simulate that data. We provide two versions:
+
+- **a small fake dataset**: This is a small dataset of not-very-realistic data suitable for quickly making sure that your code runs. Each feature column is simulated by resampling 5 values with replacement 100 times. You can generate the fake dataset by running:
+
+The script [`runtime/scripts/generate_fake_dataset.py`](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/scripts/generate_fake_dataset.py) generates the development dataset. You can learn more about it with the following command:
+
+```
+$ python runtime/scripts/generate_fake_dataset.py --help
+Usage: generate_fake_dataset.py [OPTIONS] [SUBMISSION_FORMAT_PATH]
+                                [FAKE_DATA_PARAMS_PATH] [OUTPUT_DIRECTORY]
+
+  Generates a small, not very realistic data that nonetheless can stand in
+  as the features and submission format for testing out the code execution
+  submission.
+
+  Reads fake data parameters where each feature CSV is described by the
+  column names and 5 sample values for each column. 100 rows are simulated
+  by sampling (with replacement) from those sample values. The start time
+  for the fake data is the first time in the submission format, and the end
+  time is the last time in the submission format.
+
+Arguments:
+  [SUBMISSION_FORMAT_PATH]  Path to a sample submission format.  [default:
+                            runtime/scripts/submission_format.csv.bz2]
+
+  [FAKE_DATA_PARAMS_PATH]   Path to a JSON file with fake data parameters.
+                            [default: runtime/scripts/fake_data_params.json]
+
+  [OUTPUT_DIRECTORY]        Directory where the development dataset will be
+                            saved.  [default: runtime/data]
+
+
+Options:
+  --help  Show this message and exit.
+```
+
+The default values will save the fake dataset to `runtime/data`.
+
+- **a larger development dataset**: The development dataset takes a small subset of data from the open training dataset; labels from the final day and features from the final day plus a _warm start_ period that starts two days prior to the final day. It requires that you have the open training features and submission format downloaded locally. (You can download them from the [Data download page](https://www.drivendata.org/competitions/89/competition-nasa-airport-configuration/data/).) The development dataset is suitable for a more realistic test of your submission. If your submission runs successfully on the development dataset, it _should_ run successfully on the prescreened dataset.
 
 The script [`runtime/scripts/generate_development_dataset.py`](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/scripts/generate_development_dataset.py) generates the development dataset. You can learn more about it with the following command:
 
@@ -93,7 +140,9 @@ Options:
   --help  Show this message and exit.
 ```
 
-The default value of `OUTPUT_DIRECTORY` will save the development dataset to `runtime/data`. When testing your submission locally, a Docker container is launched from your computer (or the "host" machine), and the `runtime/data` directory on your host machine is mounted as a read-only directory to `codeexecution/data`. In the runtime, your code will then be able to access test features from `codeexecution/data/test_features`.
+The default value of `OUTPUT_DIRECTORY` will save the development dataset to `runtime/data`.
+
+When testing your submission locally, a Docker container is launched from your computer (or the "host" machine), and the `runtime/data` directory on your host machine is mounted as a read-only directory to `codeexecution/data`. In the runtime, your code will then be able to access test features from `codeexecution/data/test_features`.
 
 For details about how data is accessed in the code execution runtime, see the Code submission format [page](https://www.drivendata.org/competitions/92/competition-nasa-airport-configuration-prescreened/page/442/).
 
@@ -107,22 +156,19 @@ The code execution runtime is designed to avoid the need to track valid and inva
 2. Your `main.py` runs with a single argument, the prediction time, e.g., `2022-06-09T14:00:00`. It can read your model assets, any or all of the time-censored features, and any intermediate files you may have written out in previous iterations.. It must write a CSV to `/codeexecution/data/prediction.csv` with the same format as the partial submission format, with your predicted probabilities in the `active` column.
 3. A utility script checks that your predictions for this prediction time has the same indices and same columns as the partial submission format and that the probabilities for each airport and lookahead sum to 1.
 
-The process is repeated for each prediction time in order, so as long as you only read from `/codeexecution/data`, you can be sure your model isn't using information from the future.
+The process is repeated for each prediction time in order, so as long as you only read from `/codeexecution/data`, you can be sure your model isn't using information from the future. We provide the supervisor and utility scripts; all you need to do is provide `main.py`. We have included two sample solutions:
+- [`submission_src/main.py`](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/submission_src/main.py), which implements the simplest possible valid submission, using the submission format (uniform probabilties across all configurations) as its prediction.
+- [`benchmark_src/main.py`](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/benchmark_src/main.py), which implements the _Recency-weighted historical forecast_ model from the [benchmark blog post](https://www.drivendata.co/blog/airport-configuration-benchmark).
 
-**Do**s and **don't**s
+Here's a few **do**s and **don't**s:
 
 **Do**:
 - Read features from `/codeexecution/data`. These are guaranteed to be in the past relative to the prediction time.
-- Write out and read intermediate files. Just be careful not to use any of the reserved file locations: `/codeexecution/prediction.csv`, `/codeexecution/submission.csv`, `/codeexecution/predictions`.
+- Write your prediction for the current time to `/codeexecution/prediction.csv`.
+- Write out and read intermediate files. Just be careful not to use any of the reserved file locations: `/codeexecution/prediction.csv`, `/codeexecution/submission.csv`.
 
 **Don't**:
-- Read from locations other than `/codeexecution/data`, your model assets, and intermediate files that your submission produces.
-
-We provide the supervisor and utility scripts; all you need to do is provide `main.py` that implements the 
-
-**supervisor** script simulates a real-time operational environment, curating a directory of features that is guaranteed to only contain events from before the prediction time. For each prediction time, the supervisor process generates a directory of time-censored features, 
-
-Your submission is a script `main.py` that implements a command line interface taking a single positional argument, the prediction time, e.g., `2022-06-09T14:00:00`. If we imagine your solution running in real-time, the prediction time would be the current time, and your model would generate predictions for how each of the airports will be configured from 30 minutes to 6 hours into the future. As such, at each prediction time, your model has access to features time-censored features, i.e., features _prior to_ the prediction time. The earliest prescreened feature begins two days prior to the first prediction time. (The first prediction time is on 2021-10-17; the first feature time is 2021-10-15 00:00:00.) At each iteration, the appropriate time-censored input features will be stored in a fixed location `/codeexecution/data` with the same directory structure as the training features. The directory also contains a partial submission format, `/codeexecution/data/partial_submission_format.csv`,  that only includes rows for the current prediction time. The output at each iteration should be a CSV with the same format as the partial submission format, with your predictions in the `active` column. In short, the `/codeexecution/data` directory contains all the data your script needs to make a valid prediction for a single timestamp, e.g.:
+- Read from locations other than `/codeexecution/data`, your model assets, and intermediate files that your submission produces. Submissions that attempt to read features from unauthorized locations will be disqualified.
 
 
 ## Testing a submission locally
@@ -157,49 +203,44 @@ make test-submission
 ```
 
 1. Set up the [prerequisites](#prerequisites)
-
-2. Save [fake data](#fake-test-data) in `runtime/data`
-
+2. [Simulate the test dataset](#simulating-test-data) in `runtime/data`.
 3. Download the official competition Docker image:
 
-    ```bash
-    $ make pull
-    ```
+```bash
+$ make pull
+```
 
 4. Save all of your submission files, including at least the required `main.py` script, in the `submission_src` folder of the runtime repository. Make sure any needed model weights are saved in `submission_src` as well.
 
 5. Create a `submission/submission.zip` file containing your code and model assets:
-    ```bash
-    $ make pack-submission
-    cd submission_src; zip -r ../submission/submission.zip ./*
-      adding: main.py (deflated 50%)
-    ```
+
+```bash
+$ make pack-submission
+cd submission_src; zip -r ../submission/submission.zip ./*
+  adding: main.py (deflated 50%)
+```
 
 6. Launch an instance of the competition Docker image, and run the same inference process that will take place in the official runtime:
-   ```
-   $ make test-submission
-   ```
-    
-    This unzips `submission/submission.zip` in the root directory of the container, and then runs `main.py`. The resulting prediction TIFs in `codeexecution/predictions/` are then compressed into a tar archive for scoring. The tar archive is saved out to `submission/submission.tar.gz` on your local machine.
-   
-> Remember that `codeexecution/data/test_features` is a mounted version of what you have saved locally in `runtime/data/test_features`. In the official code execution platform, `codeexecution/data/test_features` will contain the actual test features.
 
-When you run `make test-submission` the logs will be printed to the terminal and written out to `submission/log.txt`. If you run into errors, use the `log.txt` to determine what changes you need to make for your code to execute successfully. For an example of what the logs look like when the full process runs successfully, see [`example_log.txt`](https://github.com/drivendataorg/cloud-cover-runtime/blob/main/example_log.txt).
+```
+$ make test-submission
+```
+   
+This unzips `submission/submission.zip` in the root directory of the container, and then runs `main.py`. The container [entrypoint](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/entrypoint.sh) takes care of iterating over the dataset, running your `main.py` at each iteration, and compiling the individual predicitions into a single CSV for scoring. The final submission is saved out to `submission/submission.csv.zip` on your local machine.
+   
+> Remember that `codeexecution/data` is a mounted version of what you have saved locally in `runtime/data`. In the official code execution platform, `codeexecution/data` will contain the actual test features.
+
+When you run `make test-submission` the logs will be printed to the terminal and written out to `submission/log.txt`. If you run into errors, use the `log.txt` to determine what changes you need to make for your code to execute successfully. For an example of what the logs look like when the full process runs successfully, see [`example_log.txt`](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/example_log.txt).
 
 ### Scoring your predictions
 
-We have provided a [metric script](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/scripts/metric.py) to calculate the competition metric in the same way scores will be calculated in the DrivenData platform. To score your submission:
+We have provided a [metric script](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/scripts/metric.py) to calculate the competition metric in the same way scores will be calculated in the DrivenData platform. The development dataset includes test labels, allowing your to score:
 
-1. After running the above, the predictions generated by your code should be saved in an archive at `submission/submission.tar.gz`. Unzip your submission into `submission/predictions`:
-   ```bash
-   $ mkdir submission/predictions
-   $ tar -xf submission/submission.tar.gz --directory submission/predictions 
-   ```
-
-2. Make sure the labels for your fake test data are saved in `runtime/data/test_labels` in the same format as the training labels. For example, if you have a chip with id `abcd` in `runtime/data/test_features`, the label for that chip should be saved at `runtime/data/test_labels/abcd.tif`
-   
+1. After running the above, the predictions generated by your code should be saved to `submission/submission.csv.zip`.
+2. Make sure the development labels are saved in `runtime/data/test_labels.csv`.
 3. Run `runtime/scripts/metric.py` on your predictions:
-    ```bash
+
+```bash
     # show usage instructions
     $ python runtime/scripts/metric.py --help
     Usage: metric.py [OPTIONS] SUBMISSION_DIR ACTUAL_DIR
@@ -232,6 +273,9 @@ The code for the [PyTorch benchmark](https://www.drivendata.co/blog/cloud-cover-
 
 To run the benchmark submission locally:
 
+1. Set up the [prerequisites](#prerequisites)
+2. [Simulate the test dataset](#simulating-test-data) in `runtime/data`.
+3. Download the official competition Docker image:
 1. Set up the [prerequisites](#prerequisites)
 
 2. Save [fake data](#fake-test-data) in `runtime/data`

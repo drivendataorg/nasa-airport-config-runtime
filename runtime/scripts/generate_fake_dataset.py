@@ -33,13 +33,18 @@ def create_fake_features(
 
 @app.command()
 def main(
-    submission_format_path: Path = runtime_directory
-    / "scripts"
-    / "submission_format.csv.bz2",
-    fake_data_params_path: Path = runtime_directory
-    / "scripts"
-    / "fake_data_params.json",
-    output_directory: Path = runtime_directory / "data",
+    submission_format_path: Path = typer.Argument(
+        runtime_directory / "scripts" / "submission_format.csv.bz2",
+        help="Path to a sample submission format.",
+    ),
+    fake_data_params_path: Path = typer.Argument(
+        runtime_directory / "scripts" / "fake_data_params.json",
+        help="Path to a JSON file with fake data parameters.",
+    ),
+    output_directory: Path = typer.Argument(
+        runtime_directory / "data",
+        help="Directory where the development dataset will be saved.",
+    ),
 ):
     """Generates a small, not very realistic data that nonetheless can stand in as the features and
     submission format for testing out the code execution submission.

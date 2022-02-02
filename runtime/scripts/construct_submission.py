@@ -4,7 +4,7 @@ import pandas as pd
 import typer
 
 prediction_directory = Path("/predictions")
-submission_path = Path("/codeexecution/submission.csv")
+submission_path = Path("/codeexecution/submission/submission.csv.zip")
 
 
 def main():
@@ -20,7 +20,11 @@ def main():
             "config",
         ]
     )
-    submission.to_csv(submission_path, index=False)
+    submission.to_csv(
+        submission_path,
+        index=False,
+        compression={"method": "zip", "archive_name": "submission.csv"},
+    )
 
 
 if __name__ == "__main__":

@@ -16,6 +16,7 @@ def main(predictions_path: Path, labels_path: Path):
             log_loss(
                 labels.loc[labels.airport == airport],
                 predictions.loc[predictions.airport == airport],
+                eps=1e-16,
             )
             for airport in labels.airports.unique()
         ]
