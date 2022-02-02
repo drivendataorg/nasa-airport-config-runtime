@@ -19,6 +19,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Create some fake data
+        run: |
+          pip install -U numpy pandas typer
+          python runtime/scripts/generate_fake_dataset.py
+
       - name: Test zipping benchmark
         run: |
           make pack-submission
