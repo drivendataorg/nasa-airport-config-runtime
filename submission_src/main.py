@@ -27,7 +27,7 @@ def main(prediction_time: datetime):
     # Read features, process them, run your model
     prediction = submission_format.copy()
 
-    prediction.to_csv(prediction_path, date_format=DATETIME_FORMAT)
+    prediction.to_csv(prediction_path, date_format=DATETIME_FORMAT, index=False)
 
 
 if __name__ == "__main__":
