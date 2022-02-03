@@ -21,7 +21,7 @@ jobs:
 
       - name: Create some fake data
         run: |
-          pip install -U numpy pandas typer
+          pip install -U loguru numpy pandas typer
           python scripts/generate_fake_dataset.py
 
       - name: Test zipping benchmark
