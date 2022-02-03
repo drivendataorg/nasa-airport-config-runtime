@@ -72,7 +72,7 @@ exit_code=0
 	echo "Testing that submission is valid"
 	conda run -n nasa-airport-config-runtime pytest /supervisor/scripts/test_submission.py
 
-	chown appuser:appuser submission/submission.csv.zip
+	chown appuser:appuser submission/submission.csv
 
     else
         echo "ERROR: Could not find main.py in submission.zip"

@@ -14,9 +14,7 @@ app = typer.Typer(add_completion=False)
 
 @app.command()
 def main(
-    predictions_path: Path = typer.Option(
-        REPO_ROOT / "submission" / "submission.csv.zip"
-    ),
+    predictions_path: Path = typer.Option(REPO_ROOT / "submission" / "submission.csv"),
     labels_path: Path = typer.Option(
         REPO_ROOT / "runtime" / "data" / "test_labels.csv"
     ),
