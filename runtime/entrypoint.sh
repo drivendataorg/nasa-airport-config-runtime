@@ -5,17 +5,17 @@ exit_code=0
 {
     cd /codeexecution
 
-    echo "List installed packages"
-    conda list -n nasa-airport-config-runtime
-
     echo "Unpacking submission"
     unzip -n ./submission/submission.zip -d ./
 
-    echo "File list"
-    find . -type f -exec sh -c 'printf "%s %s \n" "$(ls -l $1)" "$(md5sum $1)"' '' '{}' '{}' \;
-
     if [ -f "main.py" ]
     then
+	echo "File list"
+	find . -type f -exec sh -c 'printf "%s %s \n" "$(ls -l $1)" "$(md5sum $1)"' '' '{}' '{}' \;
+
+	echo "List installed packages"
+	conda list -n nasa-airport-config-runtime
+
 	echo "Copying data from the cloud to local disk"
 	cp -r /clouddata /data
 
