@@ -78,7 +78,7 @@ We do not provide the full prescreened test set, so instead we need to simulate 
 
 #### A small fake dataset
 
-This is a small dataset of not-very-realistic data suitable for quickly making sure that your code runs. Each feature column is simulated by resampling 5 values with replacement 100 times. You can generate the fake dataset by running:
+This is a small dataset of not-very-realistic data suitable for quickly making sure that your code runs. Each feature column is simulated by resampling 10 of its values (with replacement) 100 times. You can generate the fake dataset by running:
 
 The script [`scripts/generate_fake_dataset.py`](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/scripts/generate_fake_dataset.py) generates the development dataset. You can learn more about it with the `--help` flag:
 
