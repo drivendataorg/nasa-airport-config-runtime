@@ -5,6 +5,7 @@ exit_code=0
 {
     echo "Copying data from the cloud to local disk"
     cp -r /clouddata /data
+
     find /data -type d -exec chmod 700 {} \;
     find /data -type f -exec chmod 600 {} \;
 

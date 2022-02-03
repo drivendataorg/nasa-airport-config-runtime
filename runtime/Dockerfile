@@ -40,7 +40,6 @@ RUN echo "Installing base packages..." \
     && xargs -a /home/${NB_USER}/apt.txt apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /home/${NB_USER}/apt.txt
-# ======================================================
 
 # ======================== user ========================
 USER ${NB_USER}
@@ -68,14 +67,15 @@ RUN mamba env create --name ${CONDA_ENV} -f /home/${NB_USER}/environment.yml  \
 WORKDIR /codeexecution
 RUN mkdir submission
 
-# Run the container as root
+# ======================== root ========================
 USER root
 
-# Copy supervisor script
-COPY entrypoint.sh /supervisor/entrypoint.sh
+RUN mkdir /predictions && chmod 700 /predictions
+
+COPY tests /runtime/tests
+
 COPY scripts /supervisor/scripts
 COPY supervisor.py /supervisor/supervisor.py
-COPY tests /supervisor/tests
-RUN mkdir /predictions && chmod 700 /predictions
+COPY entrypoint.sh /supervisor/entrypoint.sh
 
 CMD ["/bin/bash", "/supervisor/entrypoint.sh"]

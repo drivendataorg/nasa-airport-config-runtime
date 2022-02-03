@@ -33,7 +33,7 @@ jobs:
           docker run \
               $CONTAINER:$SHA_TAG \
               /bin/bash -c \
-              "conda run --no-capture-output -n nasa-airport-config-runtime pytest runtime/tests/test_packages.py"
+              "conda run --no-capture-output -n nasa-airport-config-runtime pytest /runtime/tests"
 
       - name: Login to DockerHub
         if: github.ref == 'refs/heads/main'
