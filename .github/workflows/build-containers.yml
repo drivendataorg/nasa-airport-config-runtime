@@ -30,7 +30,10 @@ jobs:
 
       - name: Tests container packages
         run: |
-          docker run $CONTAINER:$SHA_TAG /bin/bash -c "conda run --no-capture-output -n nasa-airport-config-runtime pytest tests/test_packages.py"
+          docker run \
+              $CONTAINER:$SHA_TAG \
+              /bin/bash -c \
+              "conda run --no-capture-output -n nasa-airport-config-runtime pytest runtime/tests/test_packages.py"
 
       - name: Login to DockerHub
         if: github.ref == 'refs/heads/main'

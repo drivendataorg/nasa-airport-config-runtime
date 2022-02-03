@@ -1,6 +1,6 @@
 import pandas as pd
 
-submission = pd.read_csv("/codeexecution/submission.csv")
+submission = pd.read_csv("/codeexecution/submission/submission.csv")
 submission_format = pd.read_csv("/data/submission_format.csv")
 
 
