@@ -11,26 +11,27 @@ This repository has three primary uses for competitors:
 
 :bulb: **Provide example solutions**: You can find two examples to help you develop your solution. 
 1. [Baseline solution](https://github.com/drivendataorg/nasa-airport-config-runtime/tree/main/submission_src): minimal code that runs succesfully in the runtime environment output and outputs a proper submission. This simply predicts equal probabilities for each configuration at an airport. You can use this as a guide to bring in your model and generate a submission.
-2. Implementation of the [benchmark solution](https://github.com/drivendataorg/nasa-airport-config-runtime/tree/main/benchmark_src): submission code based on the [benchmark blog post](https://www.drivendata.co/blog/airport-configuration-benchmark/)
+2. Implementation of the [benchmark solution](https://github.com/drivendataorg/nasa-airport-config-runtime/tree/main/benchmark_src): submission code based on the [benchmark blog post](https://www.drivendata.co/blog/airport-configuration-benchmark/).
 
-:wrench: **Test your submission**: Test your `submission` files with a locally running version of the container to discover errors before submitting to the competition site. You can also find an [evaluation script](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/scripts/metric.py) for implementing the competition metric.
+:wrench: **Test your submission**: Test your submission using a locally running version of the competition runtime to discover errors before submitting to the competition site. You can also find an [scoring script](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/scripts/score.py) implementing the competition metric.
 
-:package: **Request new packages in the official runtime**: Since the Docker container will not have network access, all packages must be pre-installed. If you want to use a package that is not in the runtime environment, make a pull request to this repository. Make sure to test out adding the new package to both official environments, [CPU](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/environment-cpu.yml) and [GPU](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/environment-gpu.yml).
+:package: **Request new packages in the official runtime**: Since your submission will be able to access the internet, all packages must be pre-installed. If you want to use a package that is not in the runtime environment, make a pull request to this repository. Make sure to test out adding the new package to both official environments, [CPU](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/environment-cpu.yml) and [GPU](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/environment-gpu.yml).
 
 ----
 
 
 ### [0. Getting started](#getting-started)
  - [Prerequisites](#prerequisites)
- - [Development dataset](#development-dataset)
+ - [Simulating test data](#simulating-test-data)
  - [Submission format](#submission-format)
 ### [1. Testing a submission locally](#testing-a-submission-locally)
  - [Running your submission locally](#running-your-submission-locally)
  - [Scoring your predictions](#scoring-your-predictions)
  - [Running the benchmark](#running-the-benchmark)
-### [2. Runtime network access](#runtime-network-access)
-### [3. Troubleshooting](#troubleshooting)
-### [4. Updating runtime packages](#updating-runtime-packages)
+### [2. Troubleshooting](#troubleshooting)
+ - [Downloading pre-trained weights](#downloading-pre-trained-weights)
+ - [CPU and GPU](#cpu-and-gpu)
+### [3. Updating runtime packages](#updating-runtime-packages)
 
 ----
 
@@ -75,11 +76,15 @@ $ tree runtime/data
 
 We do not provide the full prescreened test set, so instead we need to simulate that data. We provide two versions:
 
-- **a small fake dataset**: This is a small dataset of not-very-realistic data suitable for quickly making sure that your code runs. Each feature column is simulated by resampling 5 values with replacement 100 times. You can generate the fake dataset by running:
+#### A small fake dataset
 
-The script [`scripts/generate_fake_dataset.py`](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/scripts/generate_fake_dataset.py) generates the development dataset. You can learn more about it with the following command:
+This is a small dataset of not-very-realistic data suitable for quickly making sure that your code runs. Each feature column is simulated by resampling 5 values with replacement 100 times. You can generate the fake dataset by running:
+
+The script [`scripts/generate_fake_dataset.py`](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/scripts/generate_fake_dataset.py) generates the development dataset. You can learn more about it with the `--help` flag:
 
 ```
+$ python scripts/generate_fake_dataset.py --help
+
 Usage: generate_fake_dataset.py [OPTIONS] [FAKE_FEATURE_PARAMS_PATH]
                                 [SUBMISSION_FORMAT_PATH]
 
@@ -105,12 +110,15 @@ Options:
   --output-directory PATH  Directory where the development dataset will be
                            saved.  [default: runtime/data]
 
+  --seed INTEGER           [default: 10]
   --help                   Show this message and exit.
 ```
 
-The default values will save the fake dataset to `runtime/data`.
+By default, the fake dataset will be saved to `runtime/data`, which is where the later steps expect it to be.
 
-- **a larger development dataset**: The development dataset takes a small subset of data from the open training dataset; labels from the final day and features from the final day plus a _warm start_ period that starts two days prior to the final day. It requires that you have the open training features and submission format downloaded locally. (You can download them from the [Data download page](https://www.drivendata.org/competitions/89/competition-nasa-airport-configuration/data/).) The development dataset is suitable for a more realistic test of your submission. If your submission runs successfully on the development dataset, it _should_ run successfully on the prescreened dataset.
+#### A larger development dataset
+
+The development dataset takes a subset of data from the open training dataset; labels from the final day and features from the final day plus a _warm start_ period that starts two days prior to the final day. It requires that you have the open training features and submission format downloaded locally. (You can download them from the [Data download page](https://www.drivendata.org/competitions/89/competition-nasa-airport-configuration/data/).) The development dataset is suitable for a more realistic test of your submission. If your submission runs successfully on the development dataset, it _should_ run successfully on the prescreened dataset.
 
 The script [`scripts/generate_development_dataset.py`](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/scripts/generate_development_dataset.py) generates the development dataset. By default, the script assumes that the features and labels are located in the `data` directory in the root of this repository, but you can specify another location. You can learn more about it with the following command:
 
@@ -139,21 +147,23 @@ Options:
 
 The default values assume that the train features and labels are in the `data` directory in the root of this repository and will save the development dataset to `runtime/data`.
 
-When testing your submission locally, a Docker container is launched from your computer (or the "host" machine), and the `runtime/data` directory on your host machine is mounted as a read-only directory to `codeexecution/data`. In the runtime, your code will then be able to access test features from `codeexecution/data/test_features`.
+When testing your submission locally, a Docker container is launched from your computer (the "host" machine), and the `runtime/data` directory on your host machine is mounted as a read-only directory to `codeexecution/data`. In the runtime, your code will then be able to access test features from `codeexecution/data/test_features`.
 
-For details about how data is accessed in the code execution runtime, see the Code submission format [page](https://www.drivendata.org/competitions/92/competition-nasa-airport-configuration-prescreened/page/442/).
+For details about how data is accessed in the code execution runtime, see the [Code submission format page](https://www.drivendata.org/competitions/92/competition-nasa-airport-configuration-prescreened/page/442/).
 
 ### Code submission format
 
 Time is a key element in this competition―we're interested in a _real-time_ solution, one that can predict the future using only information available at the present. Assuring that a solution doesn't (accidentally or otherwise) use information from the future is complicated since the final evaluation dataset is a static dataset containing many different prediction times; a feature at 9 AM is valid for predicting 10 AM (it's in the past) but invalid for predicting 8 AM (it's in the future). In other words, each prediction time defines a unique set of valid features, different from that of all other prediction times! This makes it challenging to ensure that your submission only uses valid time points for each prediction time (and even more challenging for the competition hosts to validate that _all_ submissions are valid!).
 
-The code execution runtime is designed to avoid the need to track valid and invalid features. It simulates real-time conditions for each prediction time:
+The code execution runtime is designed to avoid the need to track valid and invalid features. It simulates real-time conditions for each prediction time and provides a simple way to access features that are guaranteed to be in the past. The process is defined in the [`runtime/entrypoint.sh`](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/entrypoint.sh), which runs the submissions. To summarize, for each prediction time in the submission format:
 
 1. The [**supervisor**](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/submission-service-alternating/runtime/supervisor.py) script creates a time-censored extract of the features, i.e., features _prior to_ the prediction time, and stores them to `/codeexecution/data` with the same directory structure as the training features. It also creates a **partial submission format**, `/codeexecution/data/partial_submission_format.csv`, which includes only rows for the current prediction time.
-2. Your `main.py` runs with a single argument, the prediction time, e.g., `2022-06-09T14:00:00`. It can read your model assets, any or all of the time-censored features, and any intermediate files you may have written out in previous iterations.. It must write a CSV to `/codeexecution/data/prediction.csv` with the same format as the partial submission format, with your predicted probabilities in the `active` column.
+2. Your `main.py` runs with a single argument, the prediction time, e.g., `2022-06-09T14:00:00`. It can read your model assets, any or all of the time-censored features in `/codeexecution/data`, the partial submission format, and any intermediate files you may have written out in previous iterations. It must write a CSV to `/codeexecution/data/prediction.csv` with the same format as the partial submission format with your predicted probabilities in the `active` column.
 3. A utility script checks that your predictions for this prediction time has the same indices and same columns as the partial submission format and that the probabilities for each airport and lookahead sum to 1.
 
-The process is repeated for each prediction time in order, so as long as you only read from `/codeexecution/data`, you can be sure your model isn't using information from the future. We provide the supervisor and utility scripts; all you need to do is provide `main.py`. We have included two sample solutions:
+The process is repeated for each prediction time in order, and then the individual predictions are combined into a single CSV, which is saved to `/codeexecution/submission/submission.csv.zip`.
+
+So as long as you only read from `/codeexecution/data`, you can be sure your model isn't using information from the future. We provide the supervisor and utility scripts; all you need to do is provide `main.py`. We have included two sample solutions to help you get started:
 - [`submission_src/main.py`](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/submission_src/main.py), which implements the simplest possible valid submission, using the submission format (uniform probabilties across all configurations) as its prediction.
 - [`benchmark_src/main.py`](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/benchmark_src/main.py), which implements the _Recency-weighted historical forecast_ model from the [benchmark blog post](https://www.drivendata.co/blog/airport-configuration-benchmark).
 
@@ -162,56 +172,46 @@ Here's a few **do**s and **don't**s:
 **Do**:
 - Read features from `/codeexecution/data`. These are guaranteed to be in the past relative to the prediction time.
 - Write your prediction for the current time to `/codeexecution/prediction.csv`.
-- Write out and read intermediate files. Just be careful not to use any of the reserved file locations: `/codeexecution/prediction.csv`, `/codeexecution/submission.csv`.
+- Write out and read intermediate files. Just be careful not to use any of the reserved file locations: `/codeexecution/prediction.csv`, `/codeexecution/submission/submission.csv.zip`.
 
 **Don't**:
-- Read from locations other than `/codeexecution/data`, your model assets, and intermediate files that your submission produces. Submissions that attempt to read features from unauthorized locations will be disqualified.
+- Read from locations other than `/codeexecution/data`, your model assets, and intermediate files that your submission produces. Participants who attempt to read features from unauthorized locations or otherwise circumvent the protections in place will be disqualified from the competition.
 
 
 ## Testing a submission locally
 
-Your submission will run inside a Docker container, a virtual operating system that allows for a consistent software environment across machines. **The best way to make sure your official submission to the DrivenData site will run is to first run it successfully in the container on your local machine.**
-
-On the official code execution platform, the test features and test metadata will already be mounted. The root level of your submission must contain a `main.py`. The steps that take place in the code execution platform are:
-
-1. Extract your submission and check that it contains a file `main.py`.
-2. Get a list of the prediction times.
-3. For each prediction time:
-  
-
-
-
-
-1. Run `main.py` to generate predictions. `main.py` must implement a command line interface (CLI) that perform inference on all of the test chips in `/codeexecution/data/test_features` and write predictions in the form of single-band 512x512 TIFs into the `/codeexecution/predictions` folder
-
-2. Compress all of the TIFs from `codeexecution/predictions` into a tar archive. The tar archive is then sent out for scoring - it is not scored inside of the code execution platform.
-
-> **Note:** <!-- TODO: explain how they might have access to `/data` in the local runtime but will not in the real deal -->
+When you make a submission on the DrivenData competition site, we run your submission inside a Docker container, a virtual operating system that allows for a consistent software environment across machines. **The best way to make sure your submission to the site will run is to first run it successfully in the container on your local machine.**
 
 For the full requirements of a submission, see the [Code submission format page](https://www.drivendata.org/competitions/92/competition-nasa-airport-configuration-prescreened/page/442/).
 
+
 ### Running your submission locally
 
-This section provides instructions on how to run the your submission in the code execution container from your local machine. To simplify the steps, key processes have been defined in the `Makefile`. Commands from the `Makefile` are then run with `make {command_name}`. The basic steps are:
+This section provides instructions on how to run the your submission in the code execution container from your local machine. The basic steps are:
+
 ```
 make pull
 make pack-submission
 make test-submission
 ```
 
-1. Set up the [prerequisites](#prerequisites)
+Here's a bit more detail:
+
+1. Set up the [prerequisites](#prerequisites).
 2. [Simulate the test dataset](#simulating-test-data) in `runtime/data`.
 3. Download the official competition Docker image:
 
-```bash
+To simplify the steps, key processes have been defined in the `Makefile`. Commands from the `Makefile` are then run with `make {command_name}`.
+
+```
 $ make pull
 ```
 
-4. Save all of your submission files, including at least the required `main.py` script, in the `submission_src` folder of the runtime repository. Make sure any needed model weights are saved in `submission_src` as well.
+4. Save all of your submission files, including the required `main.py` script, in the `submission_src` folder of the runtime repository. Make sure any needed model weights and other assets are saved in `submission_src` as well.
 
 5. Create a `submission/submission.zip` file containing your code and model assets:
 
-```bash
+```
 $ make pack-submission
 cd submission_src; zip -r ../submission/submission.zip ./*
   adding: main.py (deflated 50%)
@@ -222,23 +222,24 @@ cd submission_src; zip -r ../submission/submission.zip ./*
 ```
 $ make test-submission
 ```
-   
-This unzips `submission/submission.zip` in the root directory of the container, and then runs `main.py`. The container [entrypoint](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/entrypoint.sh) takes care of iterating over the dataset, running your `main.py` at each iteration, and compiling the individual predicitions into a single CSV for scoring. The final submission is saved out to `submission/submission.csv.zip` on your local machine.
+
+This unzips `submission/submission.zip` in the root directory of the container, and then runs the container entrypoint [entrypoint](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/entrypoint.sh), which iterates over the dataset, runs your `main.py` at each iteration, and compiles the individual predicitions into a single CSV for scoring. The final submission is saved out to `submission/submission.csv.zip` on your local machine.
    
 > Remember that `codeexecution/data` is a mounted version of what you have saved locally in `runtime/data`. In the official code execution platform, `codeexecution/data` will contain the actual test features.
+> Also be aware that some of the file restrictions in place in the actual code execution environment are not enforced in the local environment. For example, in the local environment, your code can access `/clouddata`, which is blocked in the actual code execution environment.
 
 When you run `make test-submission` the logs will be printed to the terminal and written out to `submission/log.txt`. If you run into errors, use the `log.txt` to determine what changes you need to make for your code to execute successfully. For an example of what the logs look like when the full process runs successfully, see [`example_log.txt`](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/example_log.txt).
 
 ### Scoring your predictions
 
-We have provided a [metric script](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/scripts/metric.py) to calculate the competition metric in the same way scores will be calculated in the DrivenData platform. The development dataset includes test labels, allowing your to score:
+We have provided a [scoring script](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/scripts/score.py) to calculate the competition metric in the same way scores will be calculated in the DrivenData platform. Both the fake dataset and development dataset include test labels, allowing you to score your predictions (although the actual scores won't be very meaningful).
 
-1. After running the above, the predictions generated by your code should be saved to `submission/submission.csv.zip`.
-2. Make sure the development labels are saved in `runtime/data/test_labels.csv`.
-3. Run `scripts/metric.py` on your predictions:
+1. After running your submission, the predictions generated by your code should be saved to `submission/submission.csv.zip`.
+2. Make sure the simulated test labels are saved in `runtime/data/test_labels.csv`.
+3. Run `scripts/score.py` on your predictions:
 
 ```
-python scripts/metric.py
+python scripts/score.py
 2022-02-03 10:32:38.116 | INFO     | __main__:main:35 - Airport scores:
 {
   "katl": 0.15841057013179075,
@@ -258,8 +259,8 @@ python scripts/metric.py
 For details about the scoring script, you can run:
 
 ```
-$ python scripts/metric.py --help
-Usage: metric.py [OPTIONS]
+$ python scripts/score.py --help
+Usage: score.py [OPTIONS]
 
   Computes the mean-aggregated log loss for a set of predictions given some
   test labels.
@@ -275,40 +276,19 @@ Options:
 
 The code for the [benchmark](https://www.drivendata.co/blog/airport-configuration-benchmark/) is also provided as an example of how to structure a more complex submission. See the benchmark [blog post](https://www.drivendata.co/blog/airport-configuration-benchmark/) for a full walkthrough. The process to run the benchmark is the same as running your own submission, except that you will reference code in `benchmark_src` rather than `submission_src`.
 
-To run the benchmark submission locally:
-
-1. Set up the [prerequisites](#prerequisites)
-2. [Simulate the test dataset](#simulating-test-data) in `runtime/data`.
-3. Download the official competition Docker image:
-
-```bash
-$ make pull
 ```
-
-4. Compress the files in `benchmark_src` to `submission/submission.zip`:
-
-```
+make pull
 make pack-benchmark
-cd benchmark_src; zip -r ../submission/submission.zip ./*
-  adding: benchmark/ (stored 0%)
-  adding: main.py (deflated 68%)
-
+make test-submission
 ```
 
-To avoid losing your work, this command will not overwrite an existing submission. To generate a new submission, you will first need to remove the existing `submission/submission.zip`.
+Note that here we are running `pack-benchmark` instead of `pack-submission`. Just like with your submission, the final predictions will be saved to `submission/submission.csv.zip` on your local machine.
 
-5. Launch an instance of the competition Docker image, and run the same inference process that will take place in the official runtime:
-
-```
-$ make test-submission
-```
-
-Just like with your submission, the final predictions will be saved to `submission/submission.csv.zip` on your local machine.
-
+## Troubleshooting
 
 ### Downloading pre-trained weights
 
-Fine-tuning an existing model is common practice in machine learning. Many software packages will download the pre-trained model from the internet behind the scenes when you instantiate a model. Since submissions do not have open access to the internet, you will need to include all weights along with your `submission.zip` and make sure that your code loads them from disk and rather than the internet.
+Fine-tuning an existing model is common practice in machine learning. Many software packages will download the pre-trained model from the internet behind the scenes when you instantiate a model. That will fail in the the code execution environment, since submissions do not have open access to the internet. Instead you will need to include all weights along with your `submission.zip` and make sure that your code loads them from disk and rather than trying to download them from the internet.
 
 For example, PyTorch uses a local cache which by default is saved to `~/.cache/torch`. Identify which of the weights in that directory are needed to run inference (if any), and copy them into your submission. If we need pre-trained ResNet34 weights we downloaded from online, we could run:
 
@@ -327,15 +307,13 @@ import os
 os.environ["TORCH_HOME"] = "/codeexecution/assets/torch"
 ```
 
-Now PyTorch will load the model weights from the local cache, and your submission will run correctly in the code execution environment without downloading from the internet.
+Now PyTorch will load the model weights from the local cache, and your submission will run correctly in the code execution environment without internet access.
 
-## Troubleshooting
-
-#### CPU and GPU
+### CPU and GPU
 
 The `make` commands will try to select the CPU or GPU image automatically by setting the `CPU_OR_GPU` variable based on whether `make` detects `nvidia-smi`.
 
-**If you have `nvidia-smi` and a CUDA version other than 11**, you will need to explicitly set `make test-submission` to run on CPU rather than GPU. `make` will automatically select the GPU image because you have access to GPU, but it will fail because `make test-submission` requires CUDA version 11. 
+**If you have `nvidia-smi` and a CUDA version other than 11**, you will need to explicitly set `make test-submission` to run on CPU rather than GPU. `make` will detect your GPU and automatically select the GPU image, but it will fail because `make test-submission` requires CUDA version 11. 
 ```bash
 CPU_OR_GPU=cpu make pull
 CPU_OR_GPU=cpu make test-submission
@@ -345,17 +323,19 @@ If you want to try using the GPU image on your machine but you don't have a GPU 
 
 ## Updating runtime packages
 
-If you want to use a package that is not in the environment, you are welcome to make a pull request to this repository. If you're new to the GitHub contribution workflow, check out [this guide by GitHub](https://docs.github.com/en/get-started/quickstart/contributing-to-projects). The runtime manages dependencies using [conda](https://docs.conda.io/en/latest/) environments. [Here is a good general guide](https://towardsdatascience.com/a-guide-to-conda-environments-bc6180fc533) to conda environments. The official runtime uses **Python 3.9.7** environments.
+If you want to use a package that is not in the environment, you are welcome to make a pull request to this repository. If you're new to the GitHub contribution workflow, check out [this guide by GitHub](https://docs.github.com/en/get-started/quickstart/contributing-to-projects).
+
+The runtime manages dependencies using [conda](https://docs.conda.io/en/latest/) environments. [Here is a good general guide](https://towardsdatascience.com/a-guide-to-conda-environments-bc6180fc533) to conda environments. The official runtime uses **Python 3.9.7** environments.
 
 To submit a pull request for a new package:
 
 1. Fork this repository.
    
 2. Edit the [conda](https://docs.conda.io/en/latest/) environment YAML files, `runtime/environment-cpu.yml` and `runtime/environment-gpu.yml`. There are two ways to add a requirement:
-    - Add an entry to the `dependencies` section. This installs from a conda channel using `conda install`. Conda performs robust dependency resolution with other packages in the `dependencies` section, so we can avoid package version conflicts.
-    - Add an entry to the `pip` section. This installs from PyPI using `pip`, and is an option for packages that are not available in a conda channel.
+    - Conda package manager: Add an entry to the `dependencies` section. This installs from a conda channel using `conda install`. Conda performs robust dependency resolution with other packages in the `dependencies` section, so we can avoid package version conflicts.
+    - Pip package manager: Add an entry to the `pip` section. This installs from PyPI using `pip`, and is an option for packages that are not available in a conda channel.
 
-    For both methods be sure to include a version, e.g., `numpy==1.20.3`. This ensures that all environments will be the same.
+For both methods be sure to include a version, e.g., `numpy==1.20.3`. This ensures that all environments will be the same.
 
 3. Locally test that the Docker image builds successfully for CPU and GPU images:
 

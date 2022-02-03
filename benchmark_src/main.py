@@ -41,14 +41,17 @@ def make_prediction(
     uniform = make_uniform(pred_frame) * hedge
     predictive_distribution = pd.DataFrame({"uniform": uniform})
 
-    # select the data we're allowed to use
     first = pred_frame.iloc[0]
     airport_code, timestamp, lookahead, _, _ = first
     airport_config_df = airport_config_df_map[airport_code]
-    current, subset = censor_data(airport_config_df, timestamp)
+    # if there is no data, return the uniform probability
+    if len(airport_config_df) == 0:
+        return uniform / uniform.sum()
+
+    current = airport_config_df.iloc[-1].timestamp
 
     # make the distribution of past configurations
-    config_dist = make_config_dist(airport_code, subset, normalize=True)
+    config_dist = make_config_dist(airport_code, airport_config_df, normalize=True)
     predictive_distribution["config_dist"] = config_dist.reindex(
         predictive_distribution.index
     ).fillna(0)
@@ -68,15 +71,6 @@ def make_prediction(
     predictive_distribution["mixture"] = mixture / mixture.sum()
 
     return predictive_distribution.mixture
-
-
-def censor_data(
-    airport_config_df: pd.DataFrame, timestamp: pd.Timestamp
-) -> Tuple[str, pd.DataFrame]:
-    mask = airport_config_df["timestamp"] <= timestamp
-    subset = airport_config_df[mask]
-    current = subset.iloc[-1].airport_config
-    return current, subset
 
 
 def make_all_predictions(
