@@ -1,3 +1,9 @@
+"""Implementation of the Recency-weighted historical forecast solution to the Run-way Functions:
+Predict Reconfigurations at US Airports challenge.
+
+https://www.drivendata.co/blog/airport-configuration-benchmark/
+"""
+
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Tuple

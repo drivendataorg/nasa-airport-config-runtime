@@ -6,6 +6,7 @@ import typer
 
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
 WARM_START_PERIOD = "2D"
+REPO_ROOT = Path(__file__).parents[1]
 
 app = typer.Typer(add_completion=False)
 
@@ -22,7 +23,7 @@ def create_development_labels_and_submission_format(
     start_time = (end_time - pd.Timedelta(days=1)).floor("1D")
     output_path = output_directory / "test_labels.csv"
     labels = labels.loc[
-        (start_time < labels.timestamp) & (labels.timestamp <= end_time)
+        (start_time <= labels.timestamp) & (labels.timestamp <= end_time)
     ].reset_index(drop=True)
     logger.debug(
         "Subsetting training labels to {:,} time points from {}-{} and saving to {}.",
@@ -54,7 +55,6 @@ def create_development_labels_and_submission_format(
     submission_format.to_csv(output_path, date_format=DATETIME_FORMAT, index=False)
 
 
-## Subsets training features from two days before final day
 def create_development_features(input_feature_directory: Path, output_directory: Path):
     """Creates development features by selecting the final day from the open arena features plus a
     warm start buffer of two days prior.
@@ -69,7 +69,14 @@ def create_development_features(input_feature_directory: Path, output_directory:
     ).floor("1D")
 
     logger.info(f"Subsetting prescreened features to time points after {feature_start}")
-    for airport_directory in sorted(input_feature_directory.glob("k*")):
+    airport_directories = sorted(input_feature_directory.glob("k*"))
+    if len(airport_directories) == 0:
+        raise ValueError(
+            f"No features detected in {input_feature_directory}. Does that directory contain one "
+            "directory of features per airport? You may need to extract the tar archive if you "
+            "downloaded the features from the competition data download page."
+        )
+    for airport_directory in airport_directories:
         airport = airport_directory.name
         logger.debug(f"Processing {airport}")
         for path in sorted(airport_directory.glob("*.csv.bz2")):
@@ -82,17 +89,23 @@ def create_development_features(input_feature_directory: Path, output_directory:
 
             assert pd.read_csv(path, nrows=1).columns.equals(
                 pd.read_csv(output_path, nrows=1).columns
-            ), f"Original feature columns and prescreened subset columns do not match ({airport}, {path.stem})."
+            ), "Original feature columns and prescreened subset columns do not match "
+            f"({airport}, {path.stem})."
 
 
 @app.command()
 def main(
-    input_labels_path: Path = typer.Argument(..., help="Path to the training labels."),
     input_feature_directory: Path = typer.Argument(
-        ..., help="Directory containing the training features."
+        REPO_ROOT / "data",
+        help="Directory containing the training features, one directory of features per airport, "
+        "e.g., data/katl, data/clt, data/den, etc.",
     ),
-    output_directory: Path = typer.Argument(
-        Path(__file__).parents[1] / "data",
+    input_labels_path: Path = typer.Argument(
+        REPO_ROOT / "data" / "open_train_labels.csv.bz2",
+        help="Path to the training labels.",
+    ),
+    output_directory: Path = typer.Option(
+        REPO_ROOT / "runtime" / "data",
         help="Directory where the development dataset will be saved.",
     ),
 ):

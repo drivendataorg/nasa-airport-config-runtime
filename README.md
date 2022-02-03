@@ -5,13 +5,13 @@
 
 ### For instructions about how to submit to the [Run-way Functions Challenge](https://www.drivendata.org/competitions/92/competition-nasa-airport-configuration-prescreened), start with the [Code submission format page](https://www.drivendata.org/competitions/92/competition-nasa-airport-configuration-prescreened/page/442/) of the competition website.
 
-Welcome to the runtime repository for the [Run-way Functions: Predict Reconfigurations at US Airports](https://www.drivendata.org/competitions/92/competition-nasa-airport-configuration-prescreened/). This repository contains the definition of the environment where your code submissions will run. It specifies both the operating system and the software packages that will be available to your solution.
+Welcome to the runtime repository for the [Run-way Functions: Predict Reconfigurations at US Airports](https://www.drivendata.org/competitions/92/competition-nasa-airport-configuration-prescreened/)! This repository contains the definition of the environment where your code submissions will run. It specifies both the operating system and the software packages that will be available to your solution.
 
 This repository has three primary uses for competitors:
 
 :bulb: **Provide example solutions**: You can find two examples to help you develop your solution. 
 1. [Baseline solution](https://github.com/drivendataorg/nasa-airport-config-runtime/tree/main/submission_src): minimal code that runs succesfully in the runtime environment output and outputs a proper submission. This simply predicts equal probabilities for each configuration at an airport. You can use this as a guide to bring in your model and generate a submission.
-2. <!--TODO: implement or remove-->Implementation of the [PyTorch benchmark](https://github.com/drivendataorg/cloud-cover-runtime/tree/main/benchmark_src): submission code based on the [benchmark blog post](https://www.drivendata.co/blog/cloud-cover-benchmark/)
+2. Implementation of the [benchmark solution](https://github.com/drivendataorg/nasa-airport-config-runtime/tree/main/benchmark_src): submission code based on the [benchmark blog post](https://www.drivendata.co/blog/airport-configuration-benchmark/)
 
 :wrench: **Test your submission**: Test your `submission` files with a locally running version of the container to discover errors before submitting to the competition site. You can also find an [evaluation script](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/scripts/metric.py) for implementing the competition metric.
 
@@ -55,36 +55,33 @@ To run a submission, the code execution environment reads features and the submi
 ```
 $ tree runtime/data
 ├── katl
-│   ├── katl_airport_config.csv.bz2
-│   ├── katl_arrival_runway.csv.bz2
-│   ├── ...
-│   └── katl_tfm_estimated_runway_arrival_time.csv.bz2
+│   ├── katl_airport_config.csv.bz2
+│   ├── katl_arrival_runway.csv.bz2
+│   ├── ...
+│   └── katl_tfm_estimated_runway_arrival_time.csv.bz2
 ├── kclt
-│   ├── kclt_airport_config.csv.bz2
-│   ├── kclt_arrival_runway.csv.bz2
-│   ├── ...
-│   └── kclt_tfm_estimated_runway_arrival_time.csv.bz2
-│   ...
+│   ├── kclt_airport_config.csv.bz2
+│   ├── kclt_arrival_runway.csv.bz2
+│   ├── ...
+│   └── kclt_tfm_estimated_runway_arrival_time.csv.bz2
+│   ...
 ├── ksea
-│   ├── ksea_airport_config.csv.bz2
-│   ├── ksea_arrival_runway.csv.bz2
-│   ├── ...
-│   └── ksea_tfm_estimated_runway_arrival_time.csv.bz2
+│   ├── ksea_airport_config.csv.bz2
+│   ├── ksea_arrival_runway.csv.bz2
+│   ├── ...
+│   └── ksea_tfm_estimated_runway_arrival_time.csv.bz2
 └── submission_format.csv
 ```
-
-#### Development dataset
 
 We do not provide the full prescreened test set, so instead we need to simulate that data. We provide two versions:
 
 - **a small fake dataset**: This is a small dataset of not-very-realistic data suitable for quickly making sure that your code runs. Each feature column is simulated by resampling 5 values with replacement 100 times. You can generate the fake dataset by running:
 
-The script [`runtime/scripts/generate_fake_dataset.py`](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/scripts/generate_fake_dataset.py) generates the development dataset. You can learn more about it with the following command:
+The script [`scripts/generate_fake_dataset.py`](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/scripts/generate_fake_dataset.py) generates the development dataset. You can learn more about it with the following command:
 
 ```
-$ python runtime/scripts/generate_fake_dataset.py --help
-Usage: generate_fake_dataset.py [OPTIONS] [SUBMISSION_FORMAT_PATH]
-                                [FAKE_DATA_PARAMS_PATH] [OUTPUT_DIRECTORY]
+Usage: generate_fake_dataset.py [OPTIONS] [FAKE_FEATURE_PARAMS_PATH]
+                                [SUBMISSION_FORMAT_PATH]
 
   Generates a small, not very realistic data that nonetheless can stand in
   as the features and submission format for testing out the code execution
@@ -97,50 +94,50 @@ Usage: generate_fake_dataset.py [OPTIONS] [SUBMISSION_FORMAT_PATH]
   time is the last time in the submission format.
 
 Arguments:
-  [SUBMISSION_FORMAT_PATH]  Path to a sample submission format.  [default:
-                            runtime/scripts/submission_format.csv.bz2]
+  [FAKE_FEATURE_PARAMS_PATH]  Path to a JSON file with fake data parameters.
+                              [default: scripts/fake_feature_params.json]
 
-  [FAKE_DATA_PARAMS_PATH]   Path to a JSON file with fake data parameters.
-                            [default: runtime/scripts/fake_data_params.json]
-
-  [OUTPUT_DIRECTORY]        Directory where the development dataset will be
-                            saved.  [default: runtime/data]
+  [SUBMISSION_FORMAT_PATH]    Path to a sample submission format.  [default:
+                              scripts/fake_submission_format.csv.bz2]
 
 
 Options:
-  --help  Show this message and exit.
+  --output-directory PATH  Directory where the development dataset will be
+                           saved.  [default: runtime/data]
+
+  --help                   Show this message and exit.
 ```
 
 The default values will save the fake dataset to `runtime/data`.
 
 - **a larger development dataset**: The development dataset takes a small subset of data from the open training dataset; labels from the final day and features from the final day plus a _warm start_ period that starts two days prior to the final day. It requires that you have the open training features and submission format downloaded locally. (You can download them from the [Data download page](https://www.drivendata.org/competitions/89/competition-nasa-airport-configuration/data/).) The development dataset is suitable for a more realistic test of your submission. If your submission runs successfully on the development dataset, it _should_ run successfully on the prescreened dataset.
 
-The script [`runtime/scripts/generate_development_dataset.py`](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/scripts/generate_development_dataset.py) generates the development dataset. You can learn more about it with the following command:
+The script [`scripts/generate_development_dataset.py`](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/scripts/generate_development_dataset.py) generates the development dataset. By default, the script assumes that the features and labels are located in the `data` directory in the root of this repository, but you can specify another location. You can learn more about it with the following command:
 
 ```
-$ python runtime/scripts/generate_development_dataset.py --help
-Usage: generate_development_dataset.py [OPTIONS] INPUT_LABELS_PATH
-                                       INPUT_FEATURE_DIRECTORY
-                                       OUTPUT_DIRECTORY
+$ python scripts/generate_development_dataset.py --help
+Usage: generate_development_dataset.py [OPTIONS] [INPUT_FEATURE_DIRECTORY]
+                                       [INPUT_LABELS_PATH] [OUTPUT_DIRECTORY]
 
   Creates a data subset that matches the format of the full evaluation data
   intended for developing your submission.
 
 Arguments:
-  INPUT_LABELS_PATH        Path to the training labels.  [required]
-  INPUT_FEATURE_DIRECTORY  Directory containing the training features.
-                           [required]
+  [INPUT_FEATURE_DIRECTORY]  Directory containing the training features.
+                             [default: data]
 
-  [OUTPUT_DIRECTORY]       Directory where the development dataset will be
-                           saved.  [default: runtime/data]
+  [INPUT_LABELS_PATH]        Path to the training labels.  [default:
+                             data/open_train_labels.csv.bz2]
 
+  [OUTPUT_DIRECTORY]         Directory where the development dataset will be
+                             saved.  [default: runtime/data]
 
 
 Options:
   --help  Show this message and exit.
 ```
 
-The default value of `OUTPUT_DIRECTORY` will save the development dataset to `runtime/data`.
+The default values assume that the train features and labels are in the `data` directory in the root of this repository and will save the development dataset to `runtime/data`.
 
 When testing your submission locally, a Docker container is launched from your computer (or the "host" machine), and the `runtime/data` directory on your host machine is mounted as a read-only directory to `codeexecution/data`. In the runtime, your code will then be able to access test features from `codeexecution/data/test_features`.
 
@@ -234,82 +231,87 @@ When you run `make test-submission` the logs will be printed to the terminal and
 
 ### Scoring your predictions
 
-We have provided a [metric script](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/scripts/metric.py) to calculate the competition metric in the same way scores will be calculated in the DrivenData platform. The development dataset includes test labels, allowing your to score:
+We have provided a [metric script](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/scripts/metric.py) to calculate the competition metric in the same way scores will be calculated in the DrivenData platform. The development dataset includes test labels, allowing your to score:
 
 1. After running the above, the predictions generated by your code should be saved to `submission/submission.csv.zip`.
 2. Make sure the development labels are saved in `runtime/data/test_labels.csv`.
-3. Run `runtime/scripts/metric.py` on your predictions:
+3. Run `scripts/metric.py` on your predictions:
 
-```bash
-    # show usage instructions
-    $ python runtime/scripts/metric.py --help
-    Usage: metric.py [OPTIONS] SUBMISSION_DIR ACTUAL_DIR
+```
+python scripts/metric.py
+2022-02-03 10:32:38.116 | INFO     | __main__:main:35 - Airport scores:
+{
+  "katl": 0.15841057013179075,
+  "kclt": 0.2711893730418441,
+  "kden": 0.11251593411963931,
+  "kdfw": 0.14250586739273782,
+  "kjfk": 0.2573186405438316,
+  "kmem": 0.14250586739273782,
+  "kmia": 0.15407610367102945,
+  "kord": 0.12169240267806194,
+  "kphx": 0.214559155176405,
+  "ksea": 0.2868359830561606
+}
+2022-02-03 10:32:38.116 | SUCCESS  | __main__:main:37 - Score: 0.18616098972042383
+```
 
-      Given a directory with the predicted mask files (all values in {0, 1}) and
-      the actual mask files (all values in {0, 1}), get the overall
-      intersection-over-union score
+For details about the scoring script, you can run:
 
-    Arguments:
-      SUBMISSION_DIR  [required]
-      ACTUAL_DIR      [required]
+```
+$ python scripts/metric.py --help
+Usage: metric.py [OPTIONS]
 
-    Options:
-      --install-completion  Install completion for the current shell.
-      --show-completion     Show completion for the current shell, to copy it or
-                            customize the installation.
+  Computes the mean-aggregated log loss for a set of predictions given some
+  test labels.
 
-      --help                Show this message and exit.
+Options:
+  --predictions-path PATH  [default: submission/submission.csv.zip]
+  --labels-path PATH       [default: runtime/data/test_labels.csv]
+  --help                   Show this message and exit.
+```
 
-    # run script on your predictions
-    $ python runtime/scripts/metric.py submission/predictions runtime/data/test_labels
-    2021-12-14 12:42:06.112 | INFO     | __main__:main:42 - calculating score for 2 image pairs ...
-    100%|█████████████████████████| 2/2 [00:00<00:00, 293.04it/s]
-    2021-12-14 12:42:06.140 | SUCCESS  | __main__:main:44 - overall score: 0.5
-    ```
 
 ### Running the benchmark
 
-The code for the [PyTorch benchmark](https://www.drivendata.co/blog/cloud-cover-benchmark/) is provided to demonstrate how a correct submission can be structured. See the benchmark [blog post](https://www.drivendata.co/blog/cloud-cover-benchmark/) for a full walkthrough. The process to run the benchmark is the same as running your own submission, except that you will reference code in `benchmark_src` rather than `submission_src`.
+The code for the [benchmark](https://www.drivendata.co/blog/airport-configuration-benchmark/) is also provided as an example of how to structure a more complex submission. See the benchmark [blog post](https://www.drivendata.co/blog/airport-configuration-benchmark/) for a full walkthrough. The process to run the benchmark is the same as running your own submission, except that you will reference code in `benchmark_src` rather than `submission_src`.
 
 To run the benchmark submission locally:
 
 1. Set up the [prerequisites](#prerequisites)
 2. [Simulate the test dataset](#simulating-test-data) in `runtime/data`.
 3. Download the official competition Docker image:
-1. Set up the [prerequisites](#prerequisites)
 
-2. Save [fake data](#fake-test-data) in `runtime/data`
-
-3. Download the official competition Docker image:
-
-    ```bash
-    $ make pull
-    ```
+```bash
+$ make pull
+```
 
 4. Compress the files in `benchmark_src` to `submission/submission.zip`:
-   ```
-   $ make pack-benchmark
-   cd benchmark_src; zip -r ../submission/submission.zip ./*
-    adding: assets/ (stored 0%)
-    adding: assets/cloud_model.pt (deflated 7%)
-    adding: cloud_dataset.py (deflated 63%)
-    adding: cloud_model.py (deflated 74%)
-    adding: losses.py (deflated 57%)
-    adding: main.py (deflated 64%)
-   ```
-   To avoid losing your work, this command will not overwrite an existing submission. To generate a new submission, you will first need to remove the existing `submission/submission.zip`.
+
+```
+make pack-benchmark
+cd benchmark_src; zip -r ../submission/submission.zip ./*
+  adding: benchmark/ (stored 0%)
+  adding: main.py (deflated 68%)
+
+```
+
+To avoid losing your work, this command will not overwrite an existing submission. To generate a new submission, you will first need to remove the existing `submission/submission.zip`.
 
 5. Launch an instance of the competition Docker image, and run the same inference process that will take place in the official runtime:
-   ```
-   $ make test-submission
-   ```
-   Just like with your submission, the final predictions will be compressed into a tar archive and saved to `submission/submission.tar.gz` on your local machine.
+
+```
+$ make test-submission
+```
+
+Just like with your submission, the final predictions will be saved to `submission/submission.csv.zip` on your local machine.
+
 
 ### Downloading pre-trained weights
 
-It is common for models to download pre-trained weights from the internet. Since submissions do not have open access to the internet, you will need to include all weights along with your `submission.zip` and make sure that your code loads them from disk and rather than the internet.
+Fine-tuning an existing model is common practice in machine learning. Many software packages will download the pre-trained model from the internet behind the scenes when you instantiate a model. Since submissions do not have open access to the internet, you will need to include all weights along with your `submission.zip` and make sure that your code loads them from disk and rather than the internet.
 
 For example, PyTorch uses a local cache which by default is saved to `~/.cache/torch`. Identify which of the weights in that directory are needed to run inference (if any), and copy them into your submission. If we need pre-trained ResNet34 weights we downloaded from online, we could run:
+
 ```sh
 # Copy your local pytorch cache into submission_src/assets
 cp ~/.cache/torch/checkpoints/resnet34-333f7ec4.pth submission_src/assets/
@@ -357,10 +359,10 @@ To submit a pull request for a new package:
 
 3. Locally test that the Docker image builds successfully for CPU and GPU images:
 
-    ```sh
-    CPU_OR_GPU=cpu make build
-    CPU_OR_GPU=gpu make build
-    ```
+```sh
+CPU_OR_GPU=cpu make build
+CPU_OR_GPU=gpu make build
+```
 
 4. Commit the changes to your forked repository.
    
