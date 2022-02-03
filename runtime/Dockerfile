@@ -63,17 +63,11 @@ RUN mamba env create --name ${CONDA_ENV} -f /home/${NB_USER}/environment.yml  \
     && find ${CONDA_DIR} -follow -type f -name '*.pyc' -delete \
     && find ${CONDA_DIR} -follow -type f -name '*.js.map' -delete
 
-# Copy code into working directory
-WORKDIR /codeexecution
-RUN mkdir submission
-
 # ======================== root ========================
 USER root
 
 RUN mkdir /predictions && chmod 700 /predictions
-
 COPY tests /runtime/tests
-
 COPY scripts /supervisor/scripts
 COPY supervisor.py /supervisor/supervisor.py
 COPY entrypoint.sh /supervisor/entrypoint.sh

@@ -3,15 +3,6 @@ set -euxo pipefail
 exit_code=0
 
 {
-    echo "Copying data from the cloud to local disk"
-    cp -r /clouddata /data
-
-    find /data -type d -exec chmod 700 {} \;
-    find /data -type f -exec chmod 600 {} \;
-
-    find /supervisor -type d -exec chmod 700 {} \;
-    find /supervisor -type f -exec chmod 600 {} \;
-
     cd /codeexecution
 
     echo "List installed packages"
@@ -25,6 +16,15 @@ exit_code=0
 
     if [ -f "main.py" ]
     then
+	echo "Copying data from the cloud to local disk"
+	cp -r /clouddata /data
+
+	find /data -type d -exec chmod 700 {} \;
+	find /data -type f -exec chmod 600 {} \;
+
+	find /supervisor -type d -exec chmod 700 {} \;
+	find /supervisor -type f -exec chmod 600 {} \;
+
 	echo "Extracting test features"
 	find /data -name '*.csv.bz2' -exec parallel -I% bunzip2 % ::: {} \+
 
