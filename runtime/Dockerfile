@@ -5,7 +5,7 @@ FROM nvidia/cuda:11.0-base-ubuntu20.04
 ARG CPU_OR_GPU=gpu
 
 ENV CONDA_VERSION=4.10.3-2 \
-    CONDA_ENV=condaenv \
+    CONDA_ENV=nasa-airport-config-runtime \
     NB_USER=appuser \
     NB_UID=1000 \
     SHELL=/bin/bash \
@@ -37,11 +37,9 @@ COPY ./apt.txt /home/${NB_USER}
 RUN echo "Installing base packages..." \
     && apt-get update --fix-missing \
     && apt-get install -y apt-utils 2> /dev/null \
-    && apt-get install -y wget zip tzdata \
     && xargs -a /home/${NB_USER}/apt.txt apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /home/${NB_USER}/apt.txt
-# ======================================================
 
 # ======================== user ========================
 USER ${NB_USER}
@@ -57,7 +55,6 @@ RUN echo "Installing Miniforge..." \
     && find ${CONDA_DIR} -follow -type f -name '*.a' -delete \
     && find ${CONDA_DIR} -follow -type f -name '*.pyc' -delete
 
-# Switch back to root for installing conda packages
 COPY environment-${CPU_OR_GPU}.yml /home/${NB_USER}/environment.yml
 RUN mamba env create --name ${CONDA_ENV} -f /home/${NB_USER}/environment.yml  \
     && mamba clean -afy \
@@ -66,10 +63,13 @@ RUN mamba env create --name ${CONDA_ENV} -f /home/${NB_USER}/environment.yml  \
     && find ${CONDA_DIR} -follow -type f -name '*.pyc' -delete \
     && find ${CONDA_DIR} -follow -type f -name '*.js.map' -delete
 
-# Copy run script into working dir and set it as the working doie
-WORKDIR /codeexecution
-COPY --chown=appuser:appuser scripts /codeexecution/scripts
-COPY --chown=appuser:appuser tests /codeexecution/tests
-COPY --chown=appuser:appuser data /codeexecution/data
-COPY --chown=appuser:appuser entrypoint.sh /codeexecution/entrypoint.sh
-CMD ["/bin/bash", "/codeexecution/entrypoint.sh"]
+# ======================== root ========================
+USER root
+
+RUN mkdir /predictions && chmod 700 /predictions
+COPY tests /runtime/tests
+COPY scripts /supervisor/scripts
+COPY supervisor.py /supervisor/supervisor.py
+COPY entrypoint.sh /supervisor/entrypoint.sh
+
+CMD ["/bin/bash", "/supervisor/entrypoint.sh"]

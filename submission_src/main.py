@@ -1,27 +1,33 @@
+from datetime import datetime
 from pathlib import Path
+import sys
 
 from loguru import logger
-import numpy as np
-from PIL import Image
+import pandas as pd
 import typer
 
-ROOT_DIRECTORY = Path("/codeexecution")
-SUBMISSION_DIRECTORY = ROOT_DIRECTORY / "submission"
-
-feature_directory = ROOT_DIRECTORY / "data" / "test_features"
-
-chips = sorted(chip for chip in feature_directory.glob("*") if chip.is_dir())
-logger.info(f"Processing {len(chips)} chips in {feature_directory}")
+logger.remove()
+logger.add(sys.stdout, level="INFO")
+logger.add(sys.stderr, level="WARNING")
 
 
-def main():
-    for chip in chips:
-        images = np.array(
-            [np.array(Image.open(image)) for image in chip.glob("*.tif")]
-        ).mean(0)
-        Image.fromarray((images > images.mean()).astype(np.uint8)).save(
-            SUBMISSION_DIRECTORY / f"{chip.name}.tif"
-        )
+DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
+
+feature_directory = Path("/codeexecution/data")
+prediction_path = Path("/codeexecution/prediction.csv")
+
+
+def main(prediction_time: datetime):
+    logger.info("Processing {}", prediction_time)
+    logger.debug("Copy partial submission format to prediction.")
+    submission_format = pd.read_csv(
+        feature_directory / "partial_submission_format.csv", parse_dates=["timestamp"]
+    )
+
+    # Read features, process them, run your model
+    prediction = submission_format.copy()
+
+    prediction.to_csv(prediction_path, date_format=DATETIME_FORMAT, index=False)
 
 
 if __name__ == "__main__":

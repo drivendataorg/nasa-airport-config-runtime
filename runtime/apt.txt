@@ -1,7 +1,10 @@
+build-essential
 git
-vim
-tree
-ffmpeg
 libsm6
 libxext6
-build-essential
+parallel
+sudo
+tree
+tzdata
+wget
+zip
