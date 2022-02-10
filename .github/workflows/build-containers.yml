@@ -16,7 +16,7 @@ jobs:
         os: ['ubuntu-latest']
         proc: ['cpu', 'gpu']
     env:
-      CONTAINER: drivendata/cloud-cover-competition
+      CONTAINER: drivendata/nasaairportconfig-competition
       SHA_TAG: ${{ matrix.proc }}-${{ github.sha }}
       LATEST_TAG: ${{ matrix.proc }}-latest
 
