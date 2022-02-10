@@ -15,7 +15,7 @@ This repository has three primary uses for competitors:
 
 :wrench: **Test your submission**: Test your submission using a locally running version of the competition runtime to discover errors before submitting to the competition site. You can also find an [scoring script](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/scripts/score.py) implementing the competition metric.
 
-:package: **Request new packages in the official runtime**: Since your submission will be able to access the internet, all packages must be pre-installed. If you want to use a package that is not in the runtime environment, make a pull request to this repository. Make sure to test out adding the new package to both official environments, [CPU](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/environment-cpu.yml) and [GPU](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/environment-gpu.yml).
+:package: **Request new packages in the official runtime**: Since your submission will not be able to access the internet, all packages must be pre-installed. If you want to use a package that is not in the runtime environment, make a pull request to this repository. Make sure to test out adding the new package to both official environments, [CPU](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/environment-cpu.yml) and [GPU](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/environment-gpu.yml).
 
 ----
 
@@ -158,7 +158,7 @@ Time is a key element in this competition―we're interested in a _real-time_ so
 The code execution runtime is designed to avoid the need to track valid and invalid features. It simulates real-time conditions for each prediction time and provides a simple way to access features that are guaranteed to be in the past. The process is defined in the [`runtime/entrypoint.sh`](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/main/runtime/entrypoint.sh), which runs the submissions. To summarize, for each prediction time in the submission format:
 
 1. The [**supervisor**](https://github.com/drivendataorg/nasa-airport-config-runtime/blob/submission-service-alternating/runtime/supervisor.py) script creates a time-censored extract of the features, i.e., features _prior to_ the prediction time, and stores them to `/codeexecution/data` with the same directory structure as the training features. It also creates a **partial submission format**, `/codeexecution/data/partial_submission_format.csv`, which includes only rows for the current prediction time.
-2. Your `main.py` runs with a single argument, the prediction time, e.g., `2022-06-09T14:00:00`. It can read your model assets, any or all of the time-censored features in `/codeexecution/data`, the partial submission format, and any intermediate files you may have written out in previous iterations. It must write a CSV to `/codeexecution/data/prediction.csv` with the same format as the partial submission format with your predicted probabilities in the `active` column.
+2. Your `main.py` runs with a single argument, the prediction time, e.g., `2022-06-09T14:00:00`. It can read your model assets, any or all of the time-censored features in `/codeexecution/data`, the partial submission format, and any intermediate files you may have written out in previous iterations. It must write a CSV to `/codeexecution/prediction.csv` that includes predicted probabilities for all airports, configurations, and lookaheads for the input prediction time. The CSV should have the same format as the partial submission format with your predicted probabilities in the `active` column.
 3. A utility script checks that your predictions for this prediction time has the same indices and same columns as the partial submission format and that the probabilities for each airport and lookahead sum to 1.
 
 The process is repeated for each prediction time in order, and then the individual predictions are combined into a single CSV, which is saved to `/codeexecution/submission/submission.csv`.
@@ -170,8 +170,9 @@ So as long as you only read from `/codeexecution/data`, you can be sure your mod
 Here's a few **do**s and **don't**s:
 
 **Do**:
+- Write a script `main.py` implementing a command line interface (CLI) that takes a single positional argument the current prediction time provided in the [datetime format](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes) `%Y-%m-%dT%H:%M:%S`, e.g., `2021-10-20T23:00:00`.
 - Read features from `/codeexecution/data`. These are guaranteed to be in the past relative to the prediction time.
-- Write your prediction for the current time to `/codeexecution/prediction.csv`.
+- Write your prediction for all lookaheads at the current prediction time to `/codeexecution/prediction.csv`.
 - Write out and read intermediate files. Just be careful not to use any of the reserved file locations: `/codeexecution/prediction.csv`, `/codeexecution/submission/submission.csv`.
 
 **Don't**:
