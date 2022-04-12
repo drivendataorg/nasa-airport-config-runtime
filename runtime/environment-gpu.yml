@@ -6,6 +6,7 @@ channels:
 - default
 dependencies:
 - catboost=1.0.3
+- xgboost=1.5.2
 - cudatoolkit=11.3
 - cudnn=8.2.1.32
 - fastai=2.5.3
