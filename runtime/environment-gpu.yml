@@ -37,4 +37,5 @@ dependencies:
 - typer=0.4.1
 - pip:
   - lightning-flash[image]==0.6.0
+  - tailer==0.4.1
 name: nasa-airport-config-runtime
