@@ -33,7 +33,7 @@ def make_prediction(
     if len(airport_config_df) == 0:
         return uniform / uniform.sum()
 
-    current = airport_config_df.iloc[-1].timestamp
+    current = airport_config_df.iloc[-1].airport_config
 
     # make the distribution of past configurations
     config_dist = make_config_dist(airport_code, airport_config_df, normalize=True)
@@ -66,9 +66,7 @@ def make_all_predictions(
     grouped = predictions.groupby(["airport", "timestamp", "lookahead"], sort=False)
     for key, pred_frame in tqdm(grouped):
         airport, timestamp, lookahead = key
-        pred_dist = make_prediction(
-            airport_config_df_map, pred_frame, weight=100, hedge=10, discount_factor=0
-        )
+        pred_dist = make_prediction(airport_config_df_map, pred_frame)
         assert np.array_equal(pred_dist.index.values, pred_frame["config"].values)
         all_preds.append(pred_dist.values)
 
